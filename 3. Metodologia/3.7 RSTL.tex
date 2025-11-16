@@ -1,0 +1,26 @@
+\section{Decomposição robusta RSTL como variável auxiliar}
+
+Além da construção de variáveis derivadas baseadas em diferenças e médias móveis, será considerada a decomposição robusta da série temporal, conhecida como RSTL (\textit{Robust Seasonal-Trend decomposition using LOESS}). Tal abordagem não será empregada aqui como modelo de previsão autônomo, mas sim como ferramenta de extração de componentes estruturais da irradiância, a fim de fornecer variáveis auxiliares que possam enriquecer os modelos principais de previsão.
+
+A decomposição será expressa pela Equação (\ref{eq:rstl_decomp}), em que a série de irradiância global $y_t$ será representada como a soma de três termos aditivos.
+\begin{equation}
+y_t \;=\; T_t + S_t + R_t
+\label{eq:rstl_decomp}
+\end{equation}
+
+\noindent
+Em que $T_t$ será a componente de tendência, capturando variações de longo prazo; $S_t$ será a componente sazonal, representando padrões repetitivos em períodos fixos; e $R_t$ será o resíduo, contendo a parcela não explicada pelas duas componentes anteriores.
+
+Para a decomposição será utilizada a implementação \texttt{STL} da biblioteca \texttt{statsmodels}, ajustada em modo robusto (\texttt{robust=True}) para reduzir a influência de outliers e assegurar maior estabilidade estatística. O período da decomposição será definido como $P=64$, correspondente a 16 horas na base em frequência de 15 minutos. Os parâmetros de suavização serão configurados de forma a permitir uma separação clara entre tendência e sazonalidade: uma janela de 155 amostras para a componente sazonal e uma janela de 255 amostras para a componente de tendência.
+
+As três componentes resultantes ($T_t$, $S_t$ e $R_t$) serão incorporadas ao conjunto de dados como novas variáveis auxiliares:
+\begin{equation}
+\mathbf{x}_t^{\,\text{RSTL}} = \big[T_t,\, S_t,\, R_t\big]
+\label{eq:rstl_features}
+\end{equation}
+
+A reconstrução da série pela soma das componentes (\ref{eq:rstl_decomp}) será comparada com a série original, obtendo-se erro médio absoluto (MAE) e raiz do erro quadrático médio (RMSE) de baixa magnitude, confirmando a consistência da decomposição. Esses resultados atestarão que a série poderá ser decomposta de maneira fiel em suas estruturas fundamentais.
+
+A justificativa para essa escolha reside no fato de que modelos de aprendizado de máquina, como o XGBoost e as redes LSTM, poderão se beneficiar da separação explícita entre tendência, sazonalidade e resíduo. O fornecimento dessas componentes como variáveis auxiliares tenderá a facilitar a identificação de padrões e a reduzir a complexidade da função de predição a ser aprendida, uma vez que parte da variabilidade já será explicitamente decomposta. Além disso, esse procedimento será facilmente replicável para outros horizontes de previsão e para diferentes configurações de modelos, preservando a generalidade do pipeline.
+
+Em resumo, o RSTL será utilizado como um mecanismo de pré-processamento auxiliar, destinado a fornecer informações estruturais adicionais ao modelo principal, sem que ele próprio seja considerado um preditor final da irradiância.

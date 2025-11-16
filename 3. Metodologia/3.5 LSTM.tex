@@ -1,0 +1,231 @@
+\section{LSTM}
+
+A implementação dos modelos em \texttt{PyTorch} será organizada em três blocos principais: (i) estrutura de dados e tensores, (ii) modelo LSTM básico e (iii) função orquestradora \texttt{train\_lstm\_forecast}, a qual permitirá treinar não apenas a LSTM, mas também variantes como arquiteturas com atenção.
+
+\subsection{Estrutura de dados e tensores}
+
+Será criada a classe \texttt{TimeSeriesDataset}, herdando de \texttt{torch.utils.data.Dataset}, a qual organizará os dados supervisionados em pares de entrada e saída. A classe converterá as matrizes de janelas $(X,y)$ para tensores \texttt{float32}, garantindo consistência no treinamento. 
+
+Cada lote do \texttt{DataLoader} será estruturado conforme a Equação (\ref{eq:lote_dataloader}).
+\begin{equation}
+\mathbf{X}_{\mathrm{batch}} \in \mathbb{R}^{B \times L \times p}, \quad \mathbf{y}_{\mathrm{batch}} \in \mathbb{R}^{B \times H}
+\label{eq:lote_dataloader}
+\end{equation}
+
+\noindent
+Em que $B$ será o tamanho do \textit{batch}; $L$ será o tamanho da janela de entrada (\textit{input window}); $p$ será o número de variáveis preditoras (\textit{features}); e $H$ será o horizonte de previsão (\textit{output window}). Essa organização materializará explicitamente o triplo \{features, input window, output window\}, fundamental para a formulação supervisionada.
+
+\subsection{Modelo LSTM}
+
+O modelo \texttt{LSTMForecast} será implementado como uma subclasse de \texttt{torch.nn.Module}, recebendo explicitamente os hiperparâmetros de arquitetura e função de ativação. Sua construção compreenderá duas camadas principais: (i) a rede recorrente LSTM e (ii) uma camada totalmente conectada para mapear o estado oculto para as previsões.
+
+Na inicialização, a classe receberá os argumentos: \texttt{input\_size} (número de \textit{features} em cada passo temporal), \texttt{hidden\_size} (dimensão do estado oculto), \texttt{num\_layers} (número de camadas empilhadas), \texttt{output\_size} (número de passos futuros a prever), \texttt{dropout} (taxa de desativação) e \texttt{activation} (função de ativação final). 
+
+A rede recorrente será instanciada conforme Equação (\ref{eq:lstm_instancia}).
+\begin{equation}
+\mathrm{LSTM}(p, h, L_r, \texttt{batch\_first=True}, d)
+\label{eq:lstm_instancia}
+\end{equation}
+
+\noindent
+Em que $p$ será o número de \textit{features} (\texttt{input\_size}); $h$ será o tamanho do estado oculto (\texttt{hidden\_size}); $L_r$ será o número de camadas empilhadas (\texttt{num\_layers}); e $d$ será a taxa de dropout aplicada entre camadas.
+
+Após a camada recorrente, será adicionada uma camada linear $\mathbf{W}\in\mathbb{R}^{H\times h}$, $\mathbf{b}\in\mathbb{R}^{H}$, responsável por projetar o estado oculto final em $H$ passos de previsão. Opcionalmente, aplicar-se-á uma função de ativação definida pelo usuário:
+\[
+\phi \in \{\mathrm{ReLU}, \tanh, \sigma, \mathrm{Identity}\}.
+\]
+
+A passagem direta do modelo será descrita pela Equação (\ref{eq:lstm_forward_full}):
+\begin{equation}
+\begin{aligned}
+\mathbf{H}, (\mathbf{h}_t,\mathbf{c}_t) &= \mathrm{LSTM}(\mathbf{X}) \\
+\mathbf{z} &= \mathbf{H}_{[:, -1, :]} \\
+\widehat{\mathbf{y}} &= \phi(\mathbf{W}\mathbf{z} + \mathbf{b}) \in \mathbb{R}^{H}
+\end{aligned}
+\label{eq:lstm_forward_full}
+\end{equation}
+
+\noindent
+Em que $\mathbf{X} \in \mathbb{R}^{B \times L \times p}$ será o lote de entradas; $\mathbf{H} \in \mathbb{R}^{B \times L \times h}$ será a sequência de estados ocultos retornados pela LSTM; $\mathbf{H}_{[:, -1, :]}$ selecionará o último estado oculto da sequência; $\mathbf{z} \in \mathbb{R}^{B \times h}$ será o vetor oculto condensado; e $\widehat{\mathbf{y}} \in \mathbb{R}^{B \times H}$ será o vetor final de previsões, já no domínio escalonado.
+
+A implementação seguirá a estratégia \textit{multi-output direto}, em que todo o horizonte de previsão será produzido de uma única vez a partir do último estado oculto. Isso evitará a acumulação de erro típica de abordagens recursivas e garantirá consistência no alinhamento temporal das saídas.
+
+O uso da função de ativação final $\phi(\cdot)$ será configurável: \texttt{ReLU}, $\tanh$ e $\sigma$ poderão impor restrições de faixa aos valores previstos; enquanto \texttt{Identity} manterá a saída linear, adequada quando as previsões forem revertidas da escala \textit{min--max} para o domínio físico (irradiância em W/m²).
+
+\subsection{Função orquestradora \texttt{train\_lstm\_forecast}}
+
+Será desenvolvida a função \texttt{train\_lstm\_forecast}, responsável por encapsular todo o pipeline de treinamento e avaliação. Essa função realizará:
+
+\begin{enumerate}
+    \item Fixação da semente aleatória (\texttt{NumPy}, \texttt{PyTorch}) para reprodutibilidade.
+    \item Criação das janelas supervisionadas $(X,y)$ e normalização \textit{min--max}, com ajuste feito apenas sobre o conjunto de treino.
+    \item Separação temporal em treino, validação e teste com base em anos específicos.
+    \item Criação de \texttt{DataLoader}s otimizados para GPU (\texttt{pin\_memory}, \texttt{non\_blocking}).
+    \item Instanciação do modelo, selecionado conforme o argumento \texttt{attention}: \texttt{none} (LSTM puro); \texttt{simple}, \texttt{multihead}, \texttt{dot}, \texttt{han} (variantes com mecanismos de atenção).
+    \item Definição da função de perda (\texttt{MSELoss}), otimizador configurável (Adam, SGD, RMSProp, AdamW, etc.) e \textit{weight decay} para regularização.
+    \item Treinamento com \textit{mixed precision} (AMP) e critério de \textit{early stopping} baseado na perda de validação.
+    \item Avaliação no conjunto de teste, inversão da escala para domínio físico (W/m²) e cálculo de métricas de desempenho.
+    \item Espalhamento das previsões $\widehat{\mathbf{y}}$ no índice temporal original, assegurando consistência no horizonte de 15 minutos.
+    \item Registro completo do experimento no \texttt{MLflow} (parâmetros, métricas, modelo e artefatos).
+\end{enumerate}
+
+
+\subsection{Parâmetros controlados}
+
+Os principais parâmetros aceitos pela função serão apresentados na Tabela \ref{tab:parametros_treino}.
+
+\begin{table}[H]
+    \centering
+    \caption{Principais parâmetros da função \texttt{train\_lstm\_forecast}.}
+    \resizebox{0.95\textwidth}{!}{%
+    \begin{tabular}{|l|p{10cm}|}
+        \hline
+        \textbf{Parâmetro} & \textbf{Descrição} \\
+        \hline
+        \texttt{input\_window} ($L$) & Comprimento da janela de entrada (nº de passos históricos). \\
+        \hline
+        \texttt{output\_window} ($H$) & Horizonte de previsão (nº de passos futuros, aqui 15 min $\times$ 64 para 1 dia). \\
+        \hline
+        \texttt{features} & Lista de variáveis preditoras utilizadas. \\
+        \hline
+        \texttt{target} & Variável alvo (irradiância global). \\
+        \hline
+        \texttt{n\_layers} & Número de camadas LSTM empilhadas. \\
+        \hline
+        \texttt{hidden\_size} & Dimensão do estado oculto em cada célula LSTM. \\
+        \hline
+        \texttt{dropout} & Taxa de desativação de neurônios para regularização. \\
+        \hline
+        \texttt{batch\_size} & Tamanho do mini-batch no treinamento. \\
+        \hline
+        \texttt{learning\_rate} & Taxa de aprendizado do otimizador. \\
+        \hline
+        \texttt{optimizer\_name} & Algoritmo de otimização escolhido (Adam, SGD, RMSProp, etc.). \\
+        \hline
+        \texttt{early\_stopping\_patience} & Nº de épocas sem melhoria para ativar parada antecipada. \\
+        \hline
+        \texttt{activation\_function} & Função de ativação na camada final (ReLU, Tanh, Sigmoid, Linear). \\
+        \hline
+        \texttt{attention} & Tipo de arquitetura (LSTM puro, variantes com atenção, CNN--LSTM). \\
+        \hline
+        \texttt{weight\_decay} & Penalização L2 nos pesos para regularização. \\
+        \hline
+        \texttt{mlflow\_experiment\_name} & Nome do experimento no \texttt{MLflow}. \\
+        \hline
+    \end{tabular}
+    }
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:parametros_treino}
+\end{table}
+
+\subsection{Mecanismos de atenção acoplados à LSTM}
+\label{subsec:lstm_attention}
+
+Nesta subseção serão descritos três mecanismos de atenção incorporados ao backbone LSTM, selecionados por cobrirem níveis distintos de expressividade e interpretabilidade: (i) atenção aditiva temporal, (ii) atenção por produto interno escalado (self-attention de uma cabeça) e (iii) atenção customizada no híbrido ARIMA--LSTM proposta por Han \& Fan (2024). A motivação é que, em previsão de irradiância, dependências de curto prazo (ex.: cobertura de nuvens) e padrões intra-diários (ex.: recorrência do mesmo horário no dia anterior) poderão ser realçadas ao permitir que o modelo pese diferencialmente os instantes da janela.
+
+\subsubsection{Atenção aditiva temporal.}
+
+Seja $\mathbf{H}=[\mathbf{h}_1,\dots,\mathbf{h}_T] \in \mathbb{R}^{T \times d}$ a matriz de estados ocultos da LSTM ao longo da janela. Será calculado um escore escalar por passo temporal via uma projeção não linear, conforme Equação (\ref{eq:att_additive_scores}).
+\begin{equation}
+e_t = \mathbf{v}^\top \tanh(\mathbf{W}_a \mathbf{h}_t + \mathbf{b}_a),
+\qquad t=1,\dots,T.
+\label{eq:att_additive_scores}
+\end{equation}
+
+\noindent
+Em que $\mathbf{h}_t \in \mathbb{R}^{d}$ será o estado oculto no tempo $t$; $\mathbf{W}_a \in \mathbb{R}^{d_a \times d}$ e $\mathbf{b}_a \in \mathbb{R}^{d_a}$ serão parâmetros de projeção; $\mathbf{v} \in \mathbb{R}^{d_a}$ projetará para um escore escalar $e_t$; e $d_a$ será a dimensão intermediária da atenção.
+
+Os pesos de atenção serão obtidos por normalização softmax, conforme Equação (\ref{eq:att_additive_alpha}).
+\begin{equation}
+\alpha_t = \frac{\exp(e_t)}{\sum_{j=1}^{T}\exp(e_j)},
+\qquad
+\boldsymbol{\alpha} = [\alpha_1,\dots,\alpha_T]^\top.
+\label{eq:att_additive_alpha}
+\end{equation}
+
+\noindent
+Em que $\alpha_t \in (0,1)$ representará a importância relativa do instante $t$ e, por construção, $\sum_{t=1}^{T}\alpha_t = 1$.
+
+O vetor de contexto será a média ponderada dos estados, conforme Equação (\ref{eq:att_additive_context}):
+\begin{equation}
+\mathbf{c} = \sum_{t=1}^{T} \alpha_t \mathbf{h}_t.
+\label{eq:att_additive_context}
+\end{equation}
+
+\noindent
+Em que $\mathbf{c} \in \mathbb{R}^{d}$ agregará informação temporal conforme relevâncias aprendidas.
+
+A predição $\widehat{\mathbf{y}}$ será obtida por uma camada de saída, conforme Equação (\ref{eq:att_additive_output}).
+\begin{equation}
+\widehat{\mathbf{y}} = \phi(\mathbf{W}_o \mathbf{c} + \mathbf{b}_o).
+\label{eq:att_additive_output}
+\end{equation}
+
+\noindent
+Em que $\mathbf{W}_o \in \mathbb{R}^{p \times d}$ e $\mathbf{b}_o \in \mathbb{R}^{p}$ serão parâmetros da camada de saída; $\phi(\cdot)$ será a função de ativação escolhida; e $p$ será o horizonte de previsão.
+
+\subsubsection{Self-attention por produto interno escalado (uma cabeça).}
+
+Parte-se de $\mathbf{H}\in\mathbb{R}^{T\times d}$ e serão obtidas consultas, chaves e valores por projeções lineares, conforme Equação (\ref{eq:dot_qkv}):
+\begin{equation}
+\mathbf{Q}=\mathbf{H}\mathbf{W}_Q,\quad
+\mathbf{K}=\mathbf{H}\mathbf{W}_K,\quad
+\mathbf{V}=\mathbf{H}\mathbf{W}_V,
+\label{eq:dot_qkv}
+\end{equation}
+
+\noindent
+Em que $\mathbf{W}_Q,\mathbf{W}_K,\mathbf{W}_V \in \mathbb{R}^{d \times d_k}$ serão matrizes de projeção e $d_k$ será a dimensão do subespaço de atenção.
+
+Os escores e pesos serão calculados pelas Equações (\ref{eq:dot_scores})--(\ref{eq:dot_alpha}), com escalonamento por $\sqrt{d_k}$ para estabilizar gradientes:
+\begin{equation}
+\mathbf{S}=\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}} \in \mathbb{R}^{T\times T},
+\label{eq:dot_scores}
+\end{equation}
+\begin{equation}
+\mathbf{A}=\mathrm{softmax}(\mathbf{S}) \quad \text{(softmax linha a linha)}.
+\label{eq:dot_alpha}
+\end{equation}
+
+\noindent
+Em que $\mathbf{S}$ conterá similaridades entre todos os pares temporais e $\mathbf{A}$ conterá pesos de atenção normalizados por linha.
+
+A sequência contextualizada será dada por $\mathbf{C}=\mathbf{A}\mathbf{V}$ e, em seguida, será agregada temporalmente por média para obter o contexto global, conforme Equação (\ref{eq:dot_context_pool}):
+\begin{equation}
+\mathbf{c}=\frac{1}{T}\sum_{t=1}^{T}\mathbf{C}_{t:}.
+\label{eq:dot_context_pool}
+\end{equation}
+
+\noindent
+Em que $\mathbf{C}\in\mathbb{R}^{T\times d_k}$ será a sequência após atenção e $\mathbf{c}\in\mathbb{R}^{d_k}$ será o vetor de contexto usado na saída. A camada de saída seguirá a Equação (\ref{eq:att_additive_output}), com dimensões ajustadas para $d_k$.
+
+\subsubsection{Atenção no híbrido ARIMA--LSTM (Han \& Fan, 2024).}
+
+Será considerado um arranjo em que uma primeira LSTM produzirá $\mathbf{H}$ e, na sequência, será aplicada self-attention com projeções $\mathbf{W}_Q,\mathbf{W}_K,\mathbf{W}_V$ (Equações \ref{eq:dot_qkv}--\ref{eq:dot_alpha}), resultando em $\mathbf{C}$. Opcionalmente, essa sequência contextualizada será fornecida a uma segunda LSTM, cujo último estado será usado na saída. Formalmente, conforme Equações (\ref{eq:han_context})--(\ref{eq:han_output}):
+\begin{equation}
+\mathbf{H}=\mathrm{LSTM}_1(\mathbf{X}), \qquad \mathbf{C}=\mathrm{softmax}\!\left(\frac{\mathbf{H}\mathbf{W}_Q (\mathbf{H}\mathbf{W}_K)^\top}{\sqrt{d_k}}\right)(\mathbf{H}\mathbf{W}_V),
+\label{eq:han_context}
+\end{equation}
+\begin{equation}
+\mathbf{z}=
+\begin{cases}
+\mathrm{LSTM}_2(\mathbf{C})_{\,\text{last}}, & \text{se a segunda LSTM estiver ativada;}\\[4pt]
+\frac{1}{T}\sum_{t=1}^{T}\mathbf{C}_{t:}, & \text{caso contrário.}
+\end{cases}
+\label{eq:han_agg}
+\end{equation}
+\begin{equation}
+\widehat{\mathbf{y}}=\phi(\mathbf{W}_o \mathbf{z} + \mathbf{b}_o).
+\label{eq:han_output}
+\end{equation}
+
+\noindent
+Em que $\mathbf{X}\in\mathbb{R}^{T\times m}$ será a janela de entrada com $m$ variáveis; $\mathrm{LSTM}_1$ capturará dinâmicas não lineares após remoção de componentes lineares (quando presente a etapa ARIMA); $\mathbf{W}_Q,\mathbf{W}_K,\mathbf{W}_V \in \mathbb{R}^{d \times d_k}$ serão as projeções da atenção; $\mathrm{LSTM}_2$ será opcional e refinará a sequência contextualizada $\mathbf{C}$; $\mathbf{z}\in\mathbb{R}^{d_k}$ será a representação agregada (último estado ou média); e $\mathbf{W}_o,\mathbf{b}_o$ e $\phi(\cdot)$ seguirão definição anterior.
+
+\subsubsection{Justificativa das escolhas.}
+
+A atenção aditiva oferecerá interpretabilidade direta e robustez com custo baixo; a atenção por produto interno escalado permitirá capturar correlações temporais não locais (p. ex., \emph{mesma hora do dia anterior}) e lidar com padrões transitórios; e a variação Han viabilizará a integração de componentes lineares (ARIMA/resíduos) com atenção, potencialmente melhorando a generalização em séries com sazonalidade diurna pronunciada. Optar-se-á por não incluir multi-head neste primeiro conjunto para evitar aumento desnecessário de parâmetros sob base de dados moderada, reservando sua avaliação para estudo de ablação posterior.
+
+\subsection{Métricas de avaliação}
+
+Após o treinamento, as previsões serão avaliadas em domínio físico (W/m²) por meio de RMSE e $R^2$, definidos nas Equações (\ref{eq:rmse}) e (\ref{eq:r2}). Além do cálculo global, as métricas também serão computadas por horizonte e em janelas diurnas (7h--19h), de modo a focar no período de maior relevância energética.

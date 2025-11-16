@@ -1,0 +1,407 @@
+% Meta-monografia de exemplo genérico de uso da classe delaetex.cls
+% Copyright (C) 2004..2019 Walter Fetter Lages <fetter@ece.ufrgs.br>
+%
+% This file was adapted from:
+% Meta-monografia de exemplo genérico de uso da classe deletex.cls
+% Copyright (C) 2004 Walter Fetter Lages <w.fetter@ieee.org>
+%
+% This is free software, distributed under the GNU GPL; please take
+% a look in `deletex.cls' to see complete information on using, copying
+% and redistributing these files
+%
+
+\documentclass[diss]{delaetex}
+
+% um tipo específico de monografia pode ser informado como parâmetro opcional:
+%\documentclass[tese]{deletex}
+
+% O tipo de monografia pode ser:
+% diss 			dissertação de mestrado
+% rp 			relatório de pesquisa
+% prop-tese 		proposta de tese de doutorado
+% plano-doutorado 	plano curso de doutorado
+% dipl-ele 		projeto de diplomação em Engenharia Elétrica
+% dipl-ecp		projeto de diplomação em Engenharia de Computação
+% dipl-cca		projeto de diplomação em Engenharia de Controle e Automaação
+% dipl-ene		projeto de diplomação em Engenharia de Energia
+% estafio		relatório de estágio supervisionado
+% ti			trabalho individual
+% pep			plano de estudos e pesquisa
+% tese			tese de doutorado
+% tc			trabalho de conclusão de mestrado profissional
+% espec			monografia de conclusão de curso de especialização
+
+% É importante notar que estes tipos de monografia foram herdados do estilo
+% do II/UFRGS e não necessariamente aplicam-se ao DELET/EE/UFRGS. Ou seja,
+% embora a classe deletex.cls defina uma opcao para elaborar um PEP, isto nao
+% significa que um PEP seja exigido pelo PPGEE.
+
+% monografias em inglês devem receber o parâmetro `english':
+%\documentclass[diss,english]{deletex}
+
+% a opção `openright' pode ser usada para forçar inícios de capítulos
+% em páginas ímpares
+% \documentclass[openright]{deletex}
+
+% para gerar uma versão somente-frente, basta utilizar a opção `oneside':
+% \documentclass[oneside]{deletex}
+
+% A opcao numbers pode ser usada para gerar referência numéricas.
+% A opcao sort&compress faz com que referencias do tipo [8,5,3,4] sejam
+% convertidas para [3-4,8]
+%\documentclass[numbers,sort&compress]{deletex}
+
+% O uso dos pacotes abaixo é opcional e depende de preferências pessoais
+% \usepackage[latin1]{inputenc}   % Para reconhecer o conjunto de
+				% caracteres latin1 (á) na entrada (.tex) e evitar a necessidade
+				% de utilizar o formato tradicional: (\'a)
+\usepackage{graphicx}           % Para importar figuras
+%\usepackage{mathptmx}          % Para usar fonte Adobe Times nas expressoes
+\usepackage{float}		% Para posicionar as figuras de forma mais conveniente
+\usepackage{url}		% Para imprimir corretamente URLs
+\usepackage{enumerate}		% Para poder enumerar com letras ao inves de numeros
+\usepackage{float}		% Para posicionar as figuras de forma mais conveniente
+\usepackage{url}		% Para imprimir corretamente URLs
+\usepackage{systeme}
+\usepackage{lscape}
+\usepackage{graphicx,color}
+\usepackage{graphicx}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{colortbl}
+\usepackage[T1]{fontenc}
+\usepackage{ragged2e}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{pgf-pie}
+\usepackage{placeins}
+\usepackage[alf]{abntex2cite} % autor-ano
+\usepackage{subfigure}
+\bibliographystyle{abntex2-alf}
+
+
+% Informações gerais
+%
+\title{Metodologia para Previsão de Irradiação Solar de Curto Prazo Com Dados Meteorológicos}
+
+\author{Boff}{Luis Fernando}
+% alguns documentos podem ter varios autores:
+%\author{Flaumann}{Frida Gutenberg}
+%\author{Flaumann}{Klaus Gutenberg}
+
+% orientador
+\advisor[Prof.~Dr.]{Chouhy Leborgne }{Roberto}
+\advisorinfo{PPGEE - UFRGS}{PhD. for Chalmers University of Technology -- Gothenburg, Sweden}
+
+% O comando \advisorwidth pode ser usado para ajustar o tamanho do campo
+% destinado ao nome do orientador, de forma a evitar que ocupe mais de uma linha 
+%\advisorwidth{0.55\textwidth}
+
+% obviamente, o co-orientador é opcional
+% \coadvisor[Prof.~Dr.]{do Co-orientador (se houver)}{Nome}
+% \coadvisorinfo{UFRGS}{Doutor pela (Instituição onde obteve o título -- Cidade, País)}
+
+% banca examinadora
+\examiner[Prof.~Dr.]{do professor)}{(nome}
+\examinerinfo{sigla da Instituição onde atual}{Doutor pela (Instituição onde obteve o título -- Cidade, País)}
+\examiner[Prof.~Dr.]{do professor)}{(nome}
+\examinerinfo{sigla da Instituição onde atual}{Doutor pela (Instituição onde obteve o título -- Cidade, País)}
+\examiner[Prof.~Dr.]{do professor)}{(nome}
+\examinerinfo{sigla da Instituição onde atual}{Doutor pela (Instituição onde obteve o título -- Cidade, País)}
+
+% a data deve ser a da defesa; se nao especificada, são gerados
+% mes e ano correntes
+%\date{fevereiro}{2004}
+
+% o nome do curso pode ser redefinido (ex. para Monografias)
+%\course{Curso de Qualquer Coisa}
+
+% o local de realização do trabalho pode ser especificado (ex. para Monografias)
+% com o comando \location:
+%\location{São José dos Campos}{SP}
+
+% itens individuais da nominata podem ser redefinidos com os comandos
+% abaixo:
+% \renewcommand{\nominataReit}{Prof\textsuperscript{a}.~Dr.~Jos{\'e} Carlos Ferraz Hennemann}
+% \renewcommand{\nominataReitname}{Reitor}
+% \renewcommand{\nominataPRE}{Prof.~Dr.~Pedro Cezar Dutra Fonseca}
+% \renewcommand{\nominataPREname}{Pr{\'o}-Reitor de Ensino}
+% \renewcommand{\nominataPRAPG}{Prof\textsuperscript{a}.~Dr\textsuperscript{a}.~Valqu\'{\i}ria Linck Bassani}
+% \renewcommand{\nominataPRAPGname}{Pr{\'o}-Reitora de P{\'o}s-Gradua{\c{c}}{\~a}o}
+% \renewcommand{\nominataDir}{Prof.~Dr.~Renato Machado de Brito}
+% \renewcommand{\nominataDirname}{Diretor da Escola de Engenharia}
+% \renewcommand{\nominataCoord}{Prof.~Dr.~Carlos Eduardo Pereira}
+% \renewcommand{\nominataCoordname}{Coordenador do PPGEE}
+% \renewcommand{\nominataBibchefe}{June Magda Rosa Schamberg}
+% \renewcommand{\nominataBibchefename}{Bibliotec{\'a}ria-chefe da Escola de Engenharia}
+% \renewcommand{\nominataChefeDELET}{Prof.~Dr.~Roberto Petry Homrich}
+% \renewcommand{\nominataChefeDELETname}{Chefe do \delet}
+
+% A seguir são apresentados comandos específicos para alguns
+% tipos de documentos.
+
+% Tese de doutorado [tese] e dissertação de mestrado [diss]:
+\topic{\se}	% area de concentracao, uma entre:
+			% \ca Controle e Automação
+			% \tic Engenharia da Computação
+			% \se Energia
+
+% Relatório de Pesquisa [rp]:
+% \rp{123}             % numero do rp
+% \financ{CNPq, CAPES} % orgaos financiadores
+
+% Trabalho Individual [ti]:
+% \ti{123}     % numero do TI
+% \ti[II]{456} % no caso de ser o segundo TI
+
+% Monografias de Especialização [espec]:
+% \topic{Automação Industrial}      % nome do curso
+% \coord[Prof.]{Bazanella}{Alexandre Sanfelice} % coordenador do curso
+% \department{\delae}                                 % departamento relacionado
+
+% Projeto de diplomação [dipl-ele] ou [dipl-ecp]:
+% Pode-se definir explicitamente o nome do curso (\course):
+%\course{\cgele}
+%\course{\cgecp}
+%\course{\cgeca}
+%
+% palavras-chave
+% iniciar todas com letras minúsculas, exceto no caso de abreviaturas
+%
+\keyword{Previsão de Irradiação Solar}
+\keyword{Aprendizado de Máquina}
+\keyword{Sustentabilidade}
+\keyword{Sistema de gerenciamento de casas inteligentes}
+\keyword{Energia Fotovoltaica}
+\keyword{Séries Temporais}
+
+
+
+
+%
+% inicio do documento
+%
+\begin{document}
+
+% O comando \maketile gera a capa, a folha de rosto e a folha de aprovacao 
+% (se for o caso)
+% às vezes é necessário redefinir algum comando logo antes de produzir
+% a Capa, folha de rosto e folha de aprovacao:
+% \renewcommand{\coordname}{Coordenadora do Curso}
+\maketitle
+
+% dedicatoria é opcional
+
+\linespread{1.241} %Este é o equivalente em LATEX de espaçamento 1.5
+
+%\chapter*{Dedicatória}
+%
+%Dedico este trabalho aos meus pais, em especial pela dedicação e apoio em
+%todos os momentos difíceis.
+%
+%% agradecimentos são opcionais
+%\chapter*{Agradecimentos}
+%
+%Ao Programa de Pós-Graduação em Engenharia Elétrica, PPGEE, pela
+%oportunidade de realização de trabalhos em minha área de pesquisa.
+%
+%Aos colegas do PPGEE pelo seu auxílio nas tarefas desenvolvidas durante o
+%curso e apoio na revisão deste trabalho.
+%
+%À CAPES pela provisão da bolsa de mestrado.
+%
+%Agradeço ao \LaTeX\ por não ter vírus de macro\ldots
+
+% resumo no idioma do documento
+\begin{abstract} 
+
+A previsão precisa da irradiação solar é fundamental para o avanço do gerenciamento energético em residências inteligentes com geração fotovoltaica. Este trabalho propõe uma metodologia para a previsão da irradiação solar global, com resolução de 15 minutos para o dia seguinte, baseada em técnicas de aprendizado de máquina e análise de dados. São explorados diferentes modelos e estratégias de tratamento de dados, buscando identificar a configuração ótima para diferentes contextos e volumes históricos. A proposta visa contribuir para a otimização de despacho energético, operação de baterias e integração de microredes ao sistema de distribuição[MELHORAR, BASE AINDA]. \TODO
+
+ 
+\end{abstract}
+
+
+% resumo no outro idioma 
+% como parametro devem ser passadas as palavras-chave 
+% no outro idioma, separadas por vírgulas
+%\begin{englishabstract}{Electrical Engineering, Signal Processing, Automation and Control, Electronic and Instrumentation}
+%\end{englishabstract}
+
+% Conforme a NBR 6027, secao 4, o sumário deve ser o último elemento pré-textual. O
+% modelo do PPGEE nao atende a esta exigencia. Obviamente, a norma deveria ter a
+% precedência. No entanto, neste arquivo optou-se por reproduzir o que está
+% no modelo para word.
+
+\linespread{1} % As listas voltam a ter espaçamento 1
+
+
+% sumario
+\tableofcontents
+
+% lista de ilustrações
+\listoffigures
+
+%lista de tabelas
+\listoftables
+
+% lista de abreviaturas e siglas
+% o parametro deve ser a abreviatura mais longa
+%\begin{listofabbrv}{PPGEE}
+%	\item[ABNT] Associação Brasileira de Normas Técnicas
+%	\item[GCAR] Grupo de Controle, Automação e Robótica
+%	\item[PPGEE] Programa de Pós-Graduação em Engenharia Elétrica
+%\end{listofabbrv}
+%
+%% lista de símbolos é opcional
+%\begin{listofsymbols}{$\alpha\beta\pi\omega$}
+%       \item[$\sum$] Somatório
+%       \item[$\alpha\beta\pi\omega$] Fator de inconstância do resultado
+%\end{listofsymbols}
+
+
+
+
+
+% AQUI COMEÇA O TEXTO PROPRIAMENTE DITO
+
+\linespread{1.241}% E o restante do texto a ter espaçamento 1.5
+
+% ---------------------------------------
+% CAPÍTULO 1 — Introdução
+% ---------------------------------------
+\chapter{Introdução}\label{chap:introducao}
+Neste capítulo é a introdução.
+% \input{cap1-introducao/01-contexto}
+\input{1. Introdução/1.1 Motivação}
+
+\input{1. Introdução/1.2 Objetivo}
+\input{1. Introdução/1.3 Estrutura}
+
+% \input{cap1-introducao/03-contribuicoes}
+% \input{cap1-introducao/04-organizacao}
+
+% ---------------------------------------
+% CAPÍTULO 2 — Revisão Bibliográfica
+% ---------------------------------------
+\chapter{Revisão Bibliográfica}\label{chap:revisao}
+
+\input{2. Revisão Bibliográfica/2.1 Estado da arte}
+
+\chapter{Fundamentação teórica}\label{chap:fundamentação}
+
+\input{2. Revisão Bibliográfica/2.2 Irradiancia}
+\input{2. Revisão Bibliográfica/2.3 Variaveis meterologicas}
+\input{2. Revisão Bibliográfica/2.4 HEMS}
+\input{2. Revisão Bibliográfica/2.5 Metodos previsão}
+% \input{2. Revisão Bibliográfica/2.6 Base de dados}
+
+% % ---------------------------------------
+% % CAPÍTULO 3 — Dados e Pré-processamento
+% % ---------------------------------------
+% \chapter{Dados e Pré-processamento}\label{chap:dados}
+% \input{cap3-dados-preproc/01-fontes-brsn-inmet}
+% \input{cap3-dados-preproc/02-qualidade-dados-fusohorario-outliers}
+% \input{cap3-dados-preproc/03-features-lags-rolling-derivadas}
+% \input{cap3-dados-preproc/04-normalizacao-splits-janelas}
+% \input{cap3-dados-preproc/05-metricas-definicoes}
+
+% ---------------------------------------
+% CAPÍTULO 4 — Metodologia
+% ---------------------------------------
+\chapter{Metodologia}\label{chap:metodologia}
+
+Este capítulo apresenta de forma panorâmica o percurso metodológico adotado no estudo, sintetizando as principais etapas que estruturam o fluxo de trabalho, conforme ilustrado na Figura \ref{fig:fluxo_metodologia}. O processo parte da seleção e preparação da base de dados, passando pela engenharia de atributos e análise exploratória, até chegar à modelagem, otimização de hiperparâmetros e geração das previsões. Cada etapa será detalhada em subseções específicas, mas aqui é fornecida uma visão geral que contextualiza o encadeamento das atividades.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Fluxo metodológico para previsão de irradiância solar.}
+    \includegraphics[width=1\textwidth]{Figuras/Flowchart.jpg}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:fluxo_metodologia}
+\end{figure}
+
+Na etapa de \textit{seleção da base de dados}, são discutidos os critérios de escolha do conjunto utilizado, com atenção à sua cobertura temporal, qualidade de medição e representatividade climática. Essa escolha fundamenta todo o processo, uma vez que garante a disponibilidade de dados consistentes para o treinamento e avaliação dos modelos.
+
+Em seguida, ocorre a \textit{limpeza e padronização}, fase em que se trata de valores ausentes, inconsistências e discrepâncias de escala. O objetivo é assegurar a coerência dos dados e prepará-los para a etapa seguinte.
+
+A \textit{engenharia de atributos e análise exploratória} constitui um dos núcleos da metodologia. São exploradas as características estatísticas da base, bem como construídas variáveis derivadas com potencial de enriquecer os modelos preditivos. Entre os principais atributos considerados estão o índice de claridade atmosférica ($k_t$), variáveis sazonais (como hora do dia e mês), resíduos de modelos autorregressivos (como ARIMA) e codificações que refletem padrões cíclicos. Essa etapa é fundamental para capturar tanto a variabilidade física da irradiância quanto os efeitos estatísticos observados na série temporal.
+
+A partir desse conjunto enriquecido, é consolidada a \textit{base final}, que serve de entrada para a etapa de modelagem. Na \textit{escolha do modelo de previsão}, são explorados diferentes algoritmos com naturezas complementares: redes neurais recorrentes do tipo LSTM, capazes de capturar dependências temporais de longo prazo; modelos baseados em árvores de decisão, como o XGBoost, reconhecidos pela robustez e capacidade de lidar com relações não lineares; e arquiteturas baseadas em mecanismos de atenção, que possibilitam maior flexibilidade na identificação de padrões relevantes ao longo do tempo. Essa diversidade de abordagens permite comparar desempenhos sob diferentes perspectivas.
+
+A etapa seguinte é a de \textit{otimização de hiperparâmetros}, na qual os modelos são ajustados por meio de técnicas de busca sistemática. São exploradas abordagens como o \textit{grid search}, que avalia combinações exaustivas de parâmetros, e a \textit{Bayesian Optimization}, que busca soluções mais eficientes por meio da exploração guiada do espaço de busca. O objetivo é identificar configurações que maximizem a capacidade preditiva dos modelos.
+
+Por fim, com os modelos ajustados, é realizada a etapa de \textit{previsão}, em que se avalia o desempenho sobre um conjunto de teste independente. Essa fase contempla a comparação entre diferentes modelos e estratégias de pré-processamento, permitindo identificar as soluções mais adequadas ao problema de previsão de irradiância solar.
+
+Dessa forma, a Figura \ref{fig:fluxo_metodologia} resume o encadeamento metodológico, enquanto este capítulo introduz cada etapa em linhas gerais, preparando o terreno para o detalhamento subsequente em seções específicas.
+
+
+\FloatBarrier
+
+
+\input{3. Metodologia/3.1 Seleção da base de dados}
+\input{3. Metodologia/3.2 Pré processamento de dados}
+\input{3. Metodologia/3.3 Análise de dados}
+\input{3. Metodologia/3.4 Modelgaem}
+\input{3. Metodologia/3.5 LSTM}
+\input{3. Metodologia/3.6 XGBoost}
+\input{3. Metodologia/3.7 RSTL}
+\input{3. Metodologia/3.8 Otimização}
+
+
+
+\chapter{Estudo de caso}\label{chap:resultados}
+\input{4. Estudo de Caso/4.1 Estudo de caso}
+\input{4. Estudo de Caso/4.2 Análise de Dados}
+
+
+
+
+% ---------------------------------------
+% CAPÍTULO 5 — Resultados e Discussões
+% ---------------------------------------
+\chapter{Resultados e Discussões}\label{chap:resultados}
+
+% Aqui nesta seção serão apresentados os resultados dos modelos (RMSE e $R^2$), assim como o gráfico de previsão e as otimizações feitas.
+
+% \subsection{Visão geral dos experimentos}
+% % Breve resumo da lógica dos cenários e organização dos resultados
+\input{5. Resultados/5.1 ARIMA}
+
+\input{5. Resultados/5.1 Modelo LSTM}
+\input{5. Resultados/5.2 Modelo XGboost}
+\input{5. Resultados/5.3 Comparação entre LSTM e XGBoost.tex}
+
+
+
+
+% \input{cap5-resultados/01-previsao-ghi-metricas-graficos}
+% \input{cap5-resultados/02-comparacao-baselines-ablation}
+% \input{cap5-resultados/03-analise-clima-cenarios}
+% \input{cap5-resultados/04-hems-resultados-economia-conforto}
+% \input{cap5-resultados/05-limitacoes-e-analise-critica}
+
+% ---------------------------------------
+% CAPÍTULO 6 — Conclusão
+% ---------------------------------------
+\chapter{Conclusão}\label{chap:conclusao}
+% \input{cap6-conclusao/01-conclusoes}
+% \input{cap6-conclusao/02-trabalhos-futuros}
+
+% ---------------------------------------
+% Apêndices (opcional)
+% ---------------------------------------
+\appendix
+\chapter{Códigos principais}\label{ap:codigos}
+% \input{apendices/A-codigos-principais}
+
+\chapter{Tabelas suplementares}\label{ap:tabelas}
+% \input{apendices/B-tabelas-suplementares}
+
+
+
+\bibliographystyle{delaeabnt}
+\bibliography{bibliografia} % Nome do arquivo .bib
+
+ \end{document}
+

@@ -1,0 +1,75 @@
+\section{Análise de Dados}
+
+Após a etapa de seleção e pré-processamento da base, será realizada a análise exploratória de dados (AED), também denominada ciência de dados aplicada. O objetivo dessa etapa será compreender a estrutura estatística e temporal da série de irradiância e das variáveis meteorológicas associadas, de modo a embasar a engenharia de variáveis e a posterior modelagem preditiva. Cada análise descrita a seguir será conduzida com a biblioteca \texttt{pandas} para manipulação de dados, enquanto as visualizações serão construídas com \texttt{matplotlib} e \texttt{seaborn}.
+
+\subsection{Distribuição temporal dos dados}
+Inicialmente, será verificada a granularidade da série temporal, identificando-se as horas únicas presentes no índice. Essa verificação permitirá confirmar a consistência da base e assegurar que os registros possuam periodicidade regular de 15 minutos. Espera-se, com isso, confirmar a adequação do conjunto para análises sazonais e aplicação de modelos de séries temporais.
+
+\subsection{Irradiância por hora do dia}
+A irradiância global será agregada por hora do dia conforme a Equação (\ref{eq:soma_hora}).
+\begin{equation}
+SWD_{h} = \sum_{t \in h} SWD_{t}
+\label{eq:soma_hora}
+\end{equation}
+
+\noindent
+Em que $SWD_{t}$ representará a irradiância no instante $t$; e $SWD_{h}$ será a soma horária da irradiância.
+
+Essa análise permitirá avaliar a contribuição relativa de cada hora para a irradiância total diária, caracterizando o perfil médio da curva solar. Espera-se identificar os horários de maior intensidade, fundamentais para a construção de variáveis sazonais.
+
+\subsection{Completude da base de dados}
+Será construída uma tabela cruzada de contagem de registros por hora e por mês, representada pela Equação (\ref{eq:contagem_dados}).
+\begin{equation}
+N_{m,h} = \sum \mathbb{1}_{\{SWD_{t} \neq \emptyset\}}, \quad t \in (m,h)
+\label{eq:contagem_dados}
+\end{equation}
+
+\noindent
+Em que $N_{m,h}$ será o número de observações no mês $m$ e hora $h$; e $\mathbb{1}_{\{SWD_{t} \neq \emptyset\}}$ será a função indicadora que assumirá valor 1 quando existir registro em $t$ e 0 caso contrário.
+
+Essa análise será fundamental para verificar a qualidade e uniformidade da base, evitando que anos incompletos comprometam a modelagem.
+
+\subsection{Médias mensais e anuais}
+A irradiância e as variáveis meteorológicas serão agregadas por mês e ano, conforme a Equação (\ref{eq:media_mensal}).
+\begin{equation}
+\overline{X}_{a,m} = \frac{1}{n_{a,m}} \sum_{t \in (a,m)} X_{t}
+\label{eq:media_mensal}
+\end{equation}
+
+\noindent
+Em que $X_{t}$ representará a variável analisada (irradiância, temperatura, umidade relativa ou pressão atmosférica); $n_{a,m}$ será o número de observações no mês $m$ do ano $a$; e $\overline{X}_{a,m}$ será o valor médio mensal da variável.
+
+Com isso, buscar-se-á caracterizar padrões sazonais e variabilidade interanual, aspectos relevantes para avaliar a estabilidade dos modelos.
+
+\subsection{Distribuições univariadas}
+Serão elaborados histogramas e boxplots de todas as variáveis. Os histogramas permitirão visualizar a densidade de probabilidade empírica, enquanto os boxplots destacarão mediana, quartis e outliers. Espera-se, com essa análise, identificar assimetrias, dispersões e valores extremos que influenciam a modelagem.
+
+\subsection{Relações bivariadas}
+Para formalizar dependências entre variáveis meteorológicas, serão calculados coeficientes de correlação de Pearson e Spearman, apresentados nas Equações (\ref{eq:pearson}) e (\ref{eq:spearman}), respectivamente.
+
+\begin{equation}
+\rho_{xy}^{Pearson} = \frac{\sum (x_i - \overline{x})(y_i - \overline{y})}{\sqrt{\sum (x_i - \overline{x})^2 \sum (y_i - \overline{y})^2}}
+\label{eq:pearson}
+\end{equation}
+
+\begin{equation}
+\rho_{xy}^{Spearman} = 1 - \frac{6 \sum d_i^2}{n(n^2-1)}
+\label{eq:spearman}
+\end{equation}
+
+\noindent
+Em que $x_i, y_i$ serão pares de observações; $\overline{x}, \overline{y}$ serão as médias de $x$ e $y$; $d_i$ será a diferença entre os postos de $x_i$ e $y_i$; e $n$ será o número de observações.
+
+A correlação de Pearson medirá associações lineares, enquanto a de Spearman capturará monotonicidade. Ambas fornecerão subsídios para a seleção de variáveis meteorológicas relevantes.
+
+\subsection{Agrupamentos por faixas}
+A irradiância será analisada por categorias de temperatura e umidade relativa. Para tanto, as variáveis serão discretizadas em intervalos, conforme a Equação (\ref{eq:faixas}).
+\begin{equation}
+C_{j} = \{ x \in \mathbb{R} \;|\; b_{j-1} \leq x < b_{j} \}
+\label{eq:faixas}
+\end{equation}
+
+\noindent
+Em que $C_{j}$ será a $j$-ésima classe de discretização; e $b_{j}$ serão os limites dos intervalos definidos de forma equi espaçada.
+
+Essa abordagem permitirá avaliar a média de irradiância em condições atmosféricas específicas, o que poderá auxiliar na criação de variáveis indicadoras.

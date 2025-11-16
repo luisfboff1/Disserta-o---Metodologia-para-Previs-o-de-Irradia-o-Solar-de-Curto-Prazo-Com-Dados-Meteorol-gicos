@@ -1,0 +1,151 @@
+\section{Modelos de previsão temporal}
+
+A previsão de séries temporais de irradiância solar é uma tarefa desafiadora e de grande relevância para a integração de sistemas fotovoltaicos na rede elétrica.  Modelos de previsão temporal variam desde abordagens estatísticas clássicas até técnicas modernas de aprendizado de máquina baseadas em redes neurais e ensembles de árvores de decisão.  Neste texto são revistos os principais modelos utilizados para previsão de séries temporais, com ênfase em Long Short–Term Memory (LSTM), redes neurais convolucionais (CNN), modelos autorregressivos integrados de média móvel (ARIMA), decomposição sazonal e tendência por LOESS (STL/RSTL), XGBoost e o modelo de persistência.  Cada subseção descreve o contexto histórico, o funcionamento matemático, a categoria do modelo, a adaptação para séries temporais e aplicações na previsão de irradiância solar.
+
+
+\subsection{LSTM – Long Short–Term Memory}
+
+As redes LSTM foram introduzidas por \citeonline{hochreiter1997} para mitigar o problema do gradiente que se dissipa em RNNs convencionais. A Figura~\ref{fig:lstm-cell} ilustra a célula LSTM adotada neste trabalho e  \eqref{eq:lstm} correspondem exatamente às operações mostradas na figura (portas de entrada, esquecimento e saída, atualização do estado de célula e estado oculto). As portas usam, por padrão, ativação sigmoide e o candidato de memória utiliza a função $\tanh$ (ambas passíveis de substituição). 
+
+\begin{equation}
+\begin{aligned}
+\mathbf{i}_t &= \sigma\!\left(\mathbf{W}_{xi}\mathbf{x}_t + \mathbf{W}_{hi}\mathbf{H}_{t-1} + \mathbf{b}_i\right),\\
+\mathbf{f}_t &= \sigma\!\left(\mathbf{W}_{xf}\mathbf{x}_t + \mathbf{W}_{hf}\mathbf{H}_{t-1} + \mathbf{b}_f\right),\\
+\mathbf{o}_t &= \sigma\!\left(\mathbf{W}_{xo}\mathbf{x}_t + \mathbf{W}_{ho}\mathbf{H}_{t-1} + \mathbf{b}_o\right),\\
+\mathbf{g}_t &= \tanh\!\left(\mathbf{W}_{xg}\mathbf{x}_t + \mathbf{W}_{hg}\mathbf{H}_{t-1} + \mathbf{b}_g\right),\\[6pt]
+\mathbf{C}_t &= \mathbf{f}_t \odot \mathbf{C}_{t-1} + \mathbf{i}_t \odot \mathbf{g}_t,\\
+\mathbf{H}_t &= \mathbf{o}_t \odot \tanh(\mathbf{C}_t).
+\end{aligned}
+\label{eq:lstm}
+\end{equation}
+\noindent
+Em que $\mathbf{x}_t \in \mathbb{R}^d$ representa o vetor de entrada no instante $t$; $\mathbf{H}_{t-1}$ é o estado oculto no instante anterior; $\mathbf{C}_{t-1}$ corresponde ao estado da célula no instante anterior; $\mathbf{i}_t$ é a porta de entrada, que controla quanto da nova informação será incorporada; $\mathbf{f}_t$ é a porta de esquecimento, responsável por decidir o quanto da memória anterior será descartado; $\mathbf{o}_t$ é a porta de saída, que regula a contribuição do estado da célula para o estado oculto; $\mathbf{g}_t$ é o candidato de memória, vetor de novos conteúdos candidatos a serem adicionados; $\mathbf{C}_t$ é o estado de célula atualizado (memória de longo prazo); $\mathbf{H}_t$ é o estado oculto atualizado (saída da célula); $\sigma(\cdot)$ representa a função sigmoide logística, que restringe valores ao intervalo $(0,1)$; $\tanh(\cdot)$ representa a função tangente hiperbólica, que restringe valores ao intervalo $(-1,1)$; e $\odot$ denota o produto de Hadamard (produto elemento a elemento).
+
+
+\begin{figure}[!h]
+    \centering
+    \caption{Arquitetura de uma célula LSTM}
+    
+    \includegraphics[width=0.8\textwidth]{2. Revisão Bibliográfica/Figuras/Arqueitetura LSTM.png}
+    % \captionsetup{justification=centering}
+    \par\small{Fonte: Adaptado de \citeonline{hochreiter1997}.}
+    \label{fig:lstm-cell}
+\end{figure}
+
+\FloatBarrier
+
+
+Como a LSTM opera sobre sequências, não é estritamente necessário segmentar em janelas; contudo, em séries longas (ou de alta frequência) utiliza-se janelas deslizantes para reduzir a complexidade. As ativações internas (sigmoide e $\tanh$) e a ativação de \emph{saída do modelo} (camada densa final) podem ser alteradas: para regressão de irradiância, usa-se tipicamente ativação \emph{linear} na saída; ReLU/LeakyReLU podem ser usados no candidato \( \mathbf{g}_t \) em cenários específicos, embora $\tanh$ seja o padrão. Evidências empíricas mostram a efetividade da LSTM em previsão de irradiância horária e diária, superando modelos lineares como ARIMA (\cite{d2l_lstm,solarReview2021}~); variantes recentes acoplam atenção e CNN para explorar componentes espaciais e temporais~(\cite{heliyon2023}~).
+
+% --- Tabela de hiperparâmetros
+\begin{table}[!h]
+    \centering
+    % \captionsetup{justification=centering}
+    \caption{Hiperparâmetros da LSTM.}
+    \resizebox{0.9\textwidth}{!}{%
+    \begin{tabular}{|l|c|p{8.2cm}|c|}
+        \hline
+        \textbf{Hiperparâmetro} & \textbf{Símbolo} & \textbf{Efeito principal} & \textbf{Default} \\
+        \hline
+        Camadas ocultas & $n_{\text{layers}}$ & Profundidade da pilha LSTM; maior capacidade, maior risco de sobreajuste. & 2 \\
+        Unidades por camada & $h$ & Dimensão de $\mathbf{H}_t$ e $\mathbf{C}_t$; controla a complexidade do modelo. & 64 \\
+        Janela de entrada & $L_{\text{in}}$ & Nº de passos passados usados como entrada (janelas deslizantes). & 96 \,(=24h) \\
+        Horizonte de previsão & $L_{\text{out}}$ & Nº de passos à frente previstos (multi-\emph{step}). & 4 \,(=1h) \\
+        Dropout & $p$ & Regularização entre camadas/saídas recorrentes; reduz sobreajuste. & 0.2 \\
+        Taxa de aprendizado & $\eta$ & Passo de atualização do otimizador. & $10^{-3}$ \\
+        Peso L2 (decay) & $\lambda$ & Penaliza pesos grandes (regularização de Tikhonov). & $10^{-5}$ \\
+        Tamanho do lote & $B$ & Amostras por atualização; afeta estabilidade e tempo de treino. & 64 \\
+        Épocas & $E$ & Varreduras completas no treino; controla a convergência. & 100 \\
+        Otimizador & -- & Regra de atualização dos parâmetros. & Adam \\
+        Ativação das portas & $\sigma(\cdot)$ & Controla passagem (0–1) em $i_t,f_t,o_t$; pode ser \textit{hard-sigmoid}. & Sigmoide \\
+        Ativação do candidato & $\phi(\cdot)$ & Gera $g_t$; afeta faixa/estabilidade do conteúdo adicionado. & $\tanh$ \\
+        Ativação de saída (rede) & $\psi(\cdot)$ & Camada densa final; adequada ao alvo (contínuo/categórico). & Linear \\
+        Bidirecionalidade & $\beta$ & Usa LSTM bidi (não causal; somente \emph{off-line}). & \texttt{False} \\
+        Clipping de gradiente & $c_{\max}$ & Limite da norma do gradiente para estabilidade. & 1.0 \\
+        Semente aleatória & $s$ & Reprodutibilidade do treino/embaralhamento. & 42 \\
+        Parada antecipada & $P_{\text{ES}}$ & Paciência (épocas sem melhora no val.); evita sobreajuste. & 10 \\
+        \hline
+    \end{tabular}
+    }
+    \par\small{Fonte: Autor (2025)}
+    
+    \label{tab:lstm-hparams}
+\end{table}
+
+\FloatBarrier
+
+\subsection{Redes neurais convolucionais (CNN).}  As CNN foram introduzidas por \citeonline{lecun1989} com o objetivo de reconhecer códigos postais manuscritos usando redes treinadas com retropropagação.  A primeira versão, denominada LeNet, utilizava camadas de convolução e subsampling (pooling) e foi aperfeiçoada ao longo dos anos; a LeNet‑5, lançada em 1998, atingiu taxa de erro de 0,95\% no conjunto MNIST (\cite{lecun1998}~).  Em redes convolucionais, a operação de convolução desliza um filtro (ou kernel) sobre a entrada para gerar \emph{mapas de características}.  Cada mapa utiliza pesos compartilhados para detectar um padrão local específico; os campos receptivos definem a vizinhança percebida por cada unidade.  A saída de uma convolução é seguida por uma operação de pooling (média ou máximo) que reduz a resolução espacial, conferindo invariância a pequenas translações.  A CNN é uma rede neural feedforward com pesos compartilhados e pertence à categoria de modelos de \emph{deep learning} determinísticos.
+
+As CNNs foram projetadas para dados com estrutura espacial (imagens), mas podem ser adaptadas para séries temporais usando convoluções unidimensionais (1D).  Nessa adaptação, a série é segmentada em janelas de comprimento fixo e cada filtro convolucional detecta padrões locais ao longo do tempo; a saída pode ser combinada com modelos recorrentes ou camadas densas para gerar previsões.  As CNN oferecem vantagens como extração eficiente de características locais e capacidade de processamento paralelo; por outro lado, capturam apenas dependências de curto alcance e podem exigir camadas adicionais para incorporar contexto temporal.  Para previsão de irradiância solar, a combinação CNN+LSTM tem mostrado resultados promissores: um estudo recente propôs um modelo CNN com mecanismo de atenção e LSTM para prever a irradiância do dia seguinte, utilizando análise de dias semelhantes; os resultados indicaram maior precisão em comparação com abordagens convencionais (\cite{heliyon2023}~).
+
+\subsection{Modelos ARIMA e a metodologia Box–Jenkins.}  O método Box–Jenkins, desenvolvido por \citeonline{box1970}, combina componentes autorregressivos (AR), de média móvel (MA) e de diferenciação (I) para modelar séries estacionárias.  A suposição fundamental é de que a série temporal seja estacionária; portanto, séries não estacionárias são diferenciadas uma ou mais vezes para atingir estacionaridade (\cite{nist_arima}~).  Um modelo ARIMA$(p,d,q)$ obedece à (\ref{eq:arima}).
+\begin{equation}
+\Phi(B)\,\Delta^d y_t = \Theta(B)\,\varepsilon_t,
+\label{eq:arima}
+\end{equation}
+\noindent
+Em que $\Phi(B)$ é o polinômio no operador de retardo $B$ de ordem $p$; $\Theta(B)$ é o polinômio no operador de retardo $B$ de ordem $q$; $\Delta^d$ representa o operador de diferenciação de ordem $d$; e $\varepsilon_t$ corresponde ao termo de ruído branco.
+
+O método inclui etapas de identificação, estimação e validação do modelo (\cite{nist_arima}~). ARIMA pertence à categoria de modelos estatísticos lineares e é determinístico na fase de previsão.  As vantagens incluem simplicidade, interpretabilidade e capacidade de capturar padrões lineares e sazonais (quando estendido para SARIMA).  No entanto, exige estacionaridade e apresenta desempenho limitado em séries altamente não lineares ou caóticas.  Para séries com tendências sazonais marcantes, técnicas de decomposição como STL podem ser aplicadas antes do ajuste do ARIMA.  Na previsão de irradiância solar, modelos ARIMA foram utilizados desde a década de 1970: estudos pioneiros empregaram ARMA para prever irradiância e calor solar (\cite{solarReview2021}~). Como ARIMA é um modelo uni variado, janelas deslizantes podem ser usadas para treinar o modelo em subseções móveis da série, permitindo capturar mudanças locais de comportamento.
+
+\subsection{RSTL}  A decomposição sazonal e de tendência por LOESS (STL) foi proposta por \citeonline{cleveland1990} e é uma técnica que separa uma série temporal em componentes de tendência, sazonalidade e resíduo usando regressão local (LOESS).  O método requer a escolha de comprimentos de suavização: o parâmetro \emph{seasonal} controla a suavização do componente sazonal, \emph{trend} define o tamanho da janela de tendência (normalmente 1{,}5 vezes a janela sazonal) e \emph{low\_pass} controla um filtro de baixa frequência (\cite{statsmodels_stl}~). STL não é um modelo de previsão por si só, mas sua saída pode ser combinada com modelos como ARIMA ou redes neurais para prever os componentes separadamente e recombiná‑los.  Uma extensão robusta (RSTL) utiliza ponderações dependentes dos dados para tolerar observações aberrantes. A decomposição STL pertence à categoria de métodos de pré‑processamento e é determinística; a robustez aumenta a resiliência a valores atípicos.  Para séries de irradiância solar, STL pode remover tendências e sazonalidades diurnas, permitindo que modelos regressivos ou de aprendizado de máquina se concentrem no componente residual.  Em termos de janelas temporais, a decomposição é aplicada à série completa ou a janelas rolantes, dependendo da estacionaridade local.
+
+\subsection{XGBoost – Boosting de árvores com regularização.}  O algoritmo XGBoost, apresentado por \citeonline{chen2016}, é uma implementação eficiente de \emph{gradient boosting} que utiliza árvores de decisão como base.  O modelo aprende uma coleção de árvores de regressão ou classificação $\{f_k\}_{k=1}^K$ para prever a saída $\hat{y}_i = \sum_{k=1}^K f_k(\mathbf{x}_i)$ e otimiza a função objetivo \eqref{eq:xgboost-obj} composta por perda de treinamento e regularização.
+\begin{equation}
+\text{obj}(\theta) = \sum_{i=1}^n l(y_i, \hat{y}_i) + \sum_{k=1}^K \Omega(f_k),
+\label{eq:xgboost-obj}
+\end{equation}
+\noindent
+Em que $l$ representa a função de perda utilizada no treinamento, tipicamente o erro quadrático médio (MSE) em problemas de regressão; e $\Omega(f_k)$ é o termo de regularização que mede a complexidade da árvore $f_k$ (por exemplo, número de folhas e magnitude dos pesos).
+
+
+Durante o treinamento, as árvores são adicionadas de forma aditiva e a expansão de Taylor de segunda ordem da perda é usada para obter gradientes $g_i$ e Hessianas $h_i$ para cada observação (\cite{chen2016}~).  A regularização controla o tamanho e os pesos das árvores, sendo definida por \eqref{eq:xgb-regularizacao}~.
+
+\begin{equation}
+\Omega(f) \;=\; \gamma T \;+\; \tfrac{1}{2}\lambda \sum_{j=1}^T w_j^2,
+\label{eq:xgb-regularizacao}
+\end{equation}
+\noindent
+Em que $T$ é o número de folhas da árvore; $w_j$ representa o peso associado à $j$-ésima folha; $\gamma$ é o parâmetro de penalização pelo número de folhas (complexidade estrutural); e $\lambda$ é o parâmetro de regularização L2 aplicado aos pesos das folhas.
+
+
+XGBoost é um modelo de \emph{ensemble} baseado em árvores, pertencente à categoria de métodos de aprendizado de máquina supervisionado e não probabilístico. Suas vantagens incluem alta precisão, capacidade de lidar com dados esparsos e regularização incorporada. As limitações são a complexidade computacional crescente com o número de árvores e a menor interpretabilidade em comparação com modelos lineares. 
+
+Embora não seja intrinsecamente temporal, XGBoost pode ser aplicado a séries temporais mediante a criação de variáveis de atraso (\emph{lag features}) e janelas deslizantes; cada janela fornece um vetor de entrada e a previsão corresponde ao próximo valor. Outra abordagem consiste em treinar um modelo separado para cada horizonte de previsão (\emph{direct multi-step}), em que cada estimador $f_k$ prevê um passo à frente específico, e as saídas de todos os modelos são então combinadas para formar a previsão em múltiplos passos. 
+
+O desempenho do XGBoost depende fortemente da escolha dos seus hiperparâmetros de treino, como o número de árvores $M$, a profundidade máxima $d_{\max}$, a taxa de aprendizado $\eta$, as taxas de amostragem de linhas e colunas ($s_{\text{row}}$ e $s_{\text{col}}$), e os termos de regularização ($\alpha$, $\lambda$, $\gamma$). A Tabela~\ref{tab:xgb-hparams} resume os principais hiperparâmetros, seus efeitos e valores usuais.
+
+
+
+\begin{table}[!h]
+    \centering
+    \caption{Principais Hiperparâmetros do XGBoost.}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{|l|c|p{8.2cm}|c|}
+        \hline
+        \textbf{Hiperparâmetro} & \textbf{Símbolo} & \textbf{Efeito principal} & \textbf{Default} \\
+        \hline
+        Número de árvores & $M$ & Define o número de iterações de boosting (árvores no ensemble). & 100 \\
+        Profundidade máxima & $d_{\max}$ & Controla a complexidade de cada árvore; maior profundidade captura mais relações, mas aumenta risco de sobreajuste. & 6 \\
+        Taxa de aprendizado & $\eta$ & Reduz a contribuição de cada árvore; valores menores melhoram generalização, exigindo mais árvores. & 0.3 \\
+        Subamostragem de instâncias & $s_{\text{row}}$ & Proporção de exemplos usados em cada árvore; reduz variância e acelera treino. & 1.0 \\
+        Subamostragem de colunas & $s_{\text{col}}$ & Proporção de atributos usados por árvore ou nó; promove diversidade. & 1.0 \\
+        Peso L1 & $\alpha$ & Regularização L1 nos pesos das folhas; promove esparsidade. & 0 \\
+        Peso L2 & $\lambda$ & Regularização L2 nos pesos das folhas; estabiliza os coeficientes. & 1 \\
+        Mínimo de perda para divisão & $\gamma$ & Ganho mínimo requerido para que um nó seja dividido; controla a complexidade estrutural. & 0 \\
+        Número mínimo de amostras por folha & $n_{\min}$ & Restringe folhas com poucos exemplos, evitando sobreajuste em outliers. & 1 \\
+        Objetivo & $l(\cdot)$ & Função de perda; em regressão pode ser \texttt{reg:squarederror}. & \texttt{reg:squarederror} \\
+        Métrica de avaliação & $m(\cdot)$ & Usada no monitoramento do treino; ex.: RMSE, MAE. & RMSE \\
+        Parada antecipada & $P_{\text{ES}}$ & Número de iterações sem melhora antes de encerrar o treino. & -- \\
+        Semente aleatória & $s$ & Controla a reprodutibilidade do resultado. & 42 \\
+        \hline
+    \end{tabular}
+    }
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:xgb-hparams}
+\end{table}
+
+\FloatBarrier
+\subsection{Modelo de persistência (Naïve).}  O modelo de persistência, também chamado de previsão ingênua ou \emph{no‑change}, utiliza o último valor observado como previsão de todos os horizontes futuros: $\hat{y}_{t+h} = y_t$ para $h\geq 1$ .  Esse modelo serve como referência mínima, pois é teoricamente ótimo para séries que seguem um passeio aleatório (\emph{random walk}).  Em séries com elevado nível de ruído ou comportamento integrado, modelos mais sofisticados dificilmente superam o desempenho do naïve.  A persistência pertence à categoria de métodos determinísticos e não requer parametrização; sua implementação trivial faz dele um benchmark indispensável em comparação de modelos de previsão.  Para séries de irradiância solar, o modelo de persistência é frequentemente usado para avaliar o ganho obtido por modelos complexos.  Ele pode ser interpretado como um caso extremo de janela deslizante de largura 1 (\citeonline{petropoulos2022}~).
+
+\subsection{Discussão comparativa.}  Os modelos revisados diferem quanto à estrutura, capacidade de capturar relações temporais e requisitos de dados.  ARIMA e STL são métodos estatísticos clássicos que assumem linearidade e estacionaridade; ARIMA modela a dependência temporal de forma explícita, enquanto STL decompõe a série antes da modelagem.  LSTM e CNN representam redes de aprendizado profundo que aprendem representações não lineares; a LSTM é inerentemente temporal, ao passo que a CNN precisa de adaptação por convoluções 1D e janelas.  XGBoost pertence à classe de ensembles de árvores e oferece equilíbrio entre performance e controle de \emph{overfitting}; é versátil, mas exige transformação de características para dados temporais.  O modelo de persistência, apesar de simples, fornece uma base imprescindível para avaliar se abordagens mais complexas realmente agregam valor.  Métodos baseados em decomposição, como STL/RSTL, são eficazes para isolar componentes sazonais e melhorar o desempenho de preditores subsequentes.  Em todos os casos, a escolha do modelo deve considerar a natureza da série (tendências, sazonalidades, ruído), a disponibilidade de dados e o objetivo operacional.

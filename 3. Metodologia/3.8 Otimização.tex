@@ -1,0 +1,45 @@
+\section{Otimização de hiperparâmetros}
+
+Um aspecto fundamental para o bom desempenho de modelos de previsão será a escolha adequada de hiperparâmetros, isto é, parâmetros de configuração que não serão ajustados diretamente pelo processo de treinamento, mas que influenciarão a capacidade de generalização do modelo. A busca por valores apropriados poderá ser formalizada como um problema de otimização conforme a Equação (\ref{eq:hyperopt}).
+
+\begin{equation}
+\theta^{*} = \arg\min_{\theta \in \Theta} \; \mathcal{L}(M(\theta); \mathcal{D}_{\text{val}})
+\label{eq:hyperopt}
+\end{equation}
+
+\noindent
+Em que $\theta$ representará um vetor de hiperparâmetros do modelo; $\Theta$ será o espaço de busca dos hiperparâmetros; $M(\theta)$ será o modelo configurado com hiperparâmetros $\theta$; $\mathcal{L}(\cdot)$ será a função de perda avaliada sobre o conjunto de validação $\mathcal{D}_{\text{val}}$; e $\theta^{*}$ será a configuração ótima obtida.
+
+Serão exploradas duas abordagens complementares para a resolução do problema de otimização da Equação (\ref{eq:hyperopt}): a busca exaustiva em grade (\textit{Grid Search}) e a otimização Bayesiana.
+
+\subsection{Grid Search}
+A busca em grade consistirá em definir um subconjunto discreto $\Theta \subset \mathbb{R}^d$, formado por combinações possíveis de hiperparâmetros pré-especificados, e avaliar exaustivamente cada combinação. O processo será descrito pela Equação (\ref{eq:gridsearch}).
+
+\begin{equation}
+\theta^{*}_{\text{grid}} = \arg\min_{\theta \in \Theta_{\text{grid}}} \; \mathcal{L}(M(\theta); \mathcal{D}_{\text{val}})
+\label{eq:gridsearch}
+\end{equation}
+
+\noindent
+Em que $\Theta_{\text{grid}}$ será o conjunto de pontos gerado pela discretização dos hiperparâmetros de interesse.
+
+A principal vantagem do Grid Search será sua simplicidade e garantia de testar todas as combinações especificadas, o que assegurará encontrar o melhor valor dentro da grade definida. Contudo, o custo computacional crescerá exponencialmente com o número de hiperparâmetros e de valores candidatos (\textit{curse of dimensionality}), tornando-se inviável em cenários de alta dimensionalidade.
+
+\subsection{Otimização Bayesiana}
+A otimização Bayesiana buscará reduzir o número de avaliações necessárias modelando a função de perda $\mathcal{L}(\theta)$ como uma função aleatória, com distribuição a posteriori atualizada a cada avaliação. Será utilizado tipicamente um processo estocástico como modelo substituto, como o processo Gaussiano, para estimar a distribuição preditiva de $\mathcal{L}$ em pontos não testados. 
+
+Seja $\mathcal{M}_t$ o modelo substituto após $t$ iterações. Definir-se-á uma \textit{função de aquisição} $a(\theta; \mathcal{M}_t)$ que quantificará o benefício esperado de avaliar $\theta$ (por exemplo, \textit{Expected Improvement} ou \textit{Upper Confidence Bound}). A próxima avaliação será dada pela Equação \ref{eq:bayesopt}.
+
+\begin{equation}
+\theta_{t+1} = \arg\max_{\theta \in \Theta} \; a(\theta; \mathcal{M}_t)
+\label{eq:bayesopt}
+\end{equation}
+
+\noindent
+Em que $a(\theta; \mathcal{M}_t)$ direcionará o equilíbrio entre exploração (regiões pouco testadas) e exploração (regiões promissoras já identificadas).
+
+Esse procedimento iterativo permitirá que a otimização Bayesiana explore o espaço de busca de forma adaptativa e eficiente, convergindo rapidamente para regiões de interesse sem necessidade de testar todas as combinações.
+
+A adoção das duas abordagens em conjunto possibilitará tanto análises exploratórias iniciais (Grid Search, com poucas variáveis e intervalos restritos) quanto a busca refinada em espaços contínuos de hiperparâmetros (Otimização Bayesiana). 
+
+É importante ressaltar que ambos os métodos serão independentes da arquitetura do modelo utilizado. Assim, poderão ser aplicados de maneira genérica a qualquer preditor considerado nesta dissertação — desde modelos lineares até redes neurais recorrentes ou regressões baseadas em árvores como o XGBoost. Isso assegurará a comparabilidade entre diferentes metodologias e a possibilidade de replicação em futuros estudos.

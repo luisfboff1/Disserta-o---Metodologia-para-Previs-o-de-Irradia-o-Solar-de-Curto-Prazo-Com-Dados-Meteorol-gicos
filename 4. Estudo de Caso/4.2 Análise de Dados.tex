@@ -1,0 +1,188 @@
+\section{Análise Exploratória de Dados (DEA)}
+
+A presente seção discute os resultados da análise exploratória aplicada à série temporal de irradiância solar e variáveis meteorológicas associadas, considerando o período de 2006 a 2017. Diferentemente das etapas metodológicas, aqui são apresentadas as distribuições, correlações e padrões observados, bem como as implicações físicas e estatísticas para a modelagem.
+
+\subsection{Distribuições univariadas com ênfase no suporte amostral}
+
+As Figuras~\ref{fig:swd_ano} a \ref{fig:swd_temp} apresentam a média de $\mathrm{SWD}$ segmentada por variáveis temporais e meteorológicas, com o número de observações ($n_b$) indicado no topo de cada barra. Essa informação é fundamental para avaliar a robustez estatística das médias, distinguindo situações em que há grande volume de dados e, portanto, estimativas mais estáveis, daquelas em que o suporte amostral é limitado e as conclusões devem ser tratadas como exploratórias.
+
+Na escala anual (Figura~\ref{fig:swd_ano}), verifica-se variabilidade entre os anos, com máximos em 2010 e 2011 (ambos com mais de $23{,}000$ observações) e mínimos em 2006 e 2013. Contudo, a interpretação para 2013 deve ser cautelosa, pois há apenas $256$ registros, o que confere alta incerteza. De modo similar, 2017 conta com pouco mais de $4{,}000$ observações, enquanto 2009, 2010, 2011 e 2016 apresentam bases mais completas, permitindo médias anuais mais confiáveis. Esse padrão mostra que aparentes oscilações interanuais muitas vezes refletem diferenças de completude dos dados, e não apenas variabilidade climática.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Média de $\mathrm{SWD}$ por ano.}
+    \includegraphics[width=0.9\textwidth]{Figuras/SWD por ano.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:swd_ano}
+\end{figure}
+
+O ciclo sazonal mensal é bem definido (Figura~\ref{fig:swd_mes}), com máximos em dezembro e janeiro (acima de $400$~W/m$^2$) e mínimos em junho e julho (cerca de $170$–$180$~W/m$^2$). O suporte amostral é elevado em todos os meses, variando de aproximadamente $10{,}400$ (fevereiro) a mais de $15{,}000$ (agosto), de forma que as médias mensais podem ser consideradas representativas. Já no recorte por dia do mês (Figura~\ref{fig:swd_dia}), observa-se estabilidade relativa entre os dias, sem tendência sistemática, mas com queda clara no número de registros a partir do dia 29, efeito esperado pela própria duração dos meses. O dia 31, com apenas $n_b \approx 3{,}072$, deve ser interpretado com cautela em comparação aos dias 1 a 28, que possuem em torno de $5{,}000$ registros cada.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Média de $\mathrm{SWD}$ por mês.}
+    \includegraphics[width=0.9\textwidth]{Figuras/SWD por mes.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:swd_mes}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \caption{Média de $\mathrm{SWD}$ por dia do mês.}
+    \includegraphics[width=0.9\textwidth]{Figuras/SWD por dia.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:swd_dia}
+\end{figure}
+
+\FloatBarrier
+
+
+O perfil intradiário (Figura~\ref{fig:swd_hora}) confirma o ciclo solar típico, com crescimento entre 5h e 12h (pico de aproximadamente $650$~W/m$^2$) e posterior decréscimo até o pôr do sol. Nesse caso, cada horário conta com $n_b=9{,}712$ registros, assegurando comparabilidade entre horas. Esse equilíbrio decorre da metodologia adotada no pré-processamento: sempre que um dia apresentava lacunas superiores a 30 minutos, todo o dia foi excluído da base, ao invés de manter séries incompletas. Essa decisão garante que o modelo aprenda de forma consistente o comportamento intradiário completo, sem distorções causadas por dias com cobertura parcial. De modo semelhante, os minutos intrahorários possuem suporte equilibrado ($n_b=38{,}848$ em cada classe), mostrando que não há efeito sistemático associado ao minuto da coleta.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Média de $\mathrm{SWD}$ por hora do dia.}
+    \includegraphics[width=0.9\textwidth]{Figuras/SWD por hora.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:swd_hora}
+\end{figure}
+\FloatBarrier
+
+
+Com o objetivo de reduzir a natureza cíclica dessas variáveis e facilitar a captura de padrões pelos modelos de aprendizado, foram aplicadas transformações sazonais de base trigonométrica, resultando nas variáveis hora sazonal e mês sazonal Essa transformação reposiciona os instantes em uma escala contínua normalizada ($[0,1]$), preservando a circularidade implícita. O resultado é uma relação mais próxima de linear entre a irradiância e as variáveis temporais transformadas, conforme observado nas Figuras~\ref{fig:swd_hora_saz} e \ref{fig:swd_mes_saz}.
+
+Na Figura~\ref{fig:swd_hora_saz}, observa-se crescimento monotônico da irradiância média ao longo das classes de hora sazonal, com valores próximos de zero no início da escala e máximos superiores a $600$~W/m$^2$ nas classes finais. O suporte amostral é equilibrado, com cerca de $19{,}424$ observações por classe (exceto o primeiro bin, que reúne $38{,}848$ registros), conferindo robustez às médias. Esse padrão mais linear tende a favorecer algoritmos sensíveis a relações monotônicas, reduzindo a necessidade de o modelo "aprender" a não linearidade do ciclo solar.
+
+De forma análoga, a variável mês sazonal (Figura~\ref{fig:swd_mes_saz}) traduz a sazonalidade anual em um gradiente contínuo: os menores valores da escala concentram médias de $170$–$200$~W/m$^2$, enquanto os maiores valores superam $400$~W/m$^2$. O suporte amostral é consistente, variando entre $25{,}344$ e $46{,}784$ registros por classe, o que assegura estabilidade nas médias. Assim, a transformação cossenoidal não apenas lineariza a relação entre mês e irradiância, mas também preserva a simetria do ciclo, melhorando o potencial de generalização dos modelos preditivos.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Média de $\mathrm{SWD}$ por hora sazonal.}
+    \includegraphics[width=0.9\textwidth]{Figuras/SWD por hora sazonal.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:swd_hora_saz}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \caption{Média de $\mathrm{SWD}$ por mês sazonal.}
+    \includegraphics[width=0.9\textwidth]{Figuras/SWD por mes sazonal.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:swd_mes_saz}
+\end{figure}
+\FloatBarrier
+
+
+
+Entre as variáveis meteorológicas, a pressão atmosférica (Figura~\ref{fig:swd_press}) apresenta associação pouco estruturada, mas seu suporte amostral é bastante desigual: classes centrais concentram dezenas de milhares de observações (p.ex., $n_b=39{,}434$ entre 957–960~hPa), enquanto as extremidades reúnem menos de $100$ registros. Portanto, médias extremas de pressão não devem ser tomadas como representativas. A umidade relativa (Figura~\ref{fig:swd_rh}) exibe relação inversa com a irradiância, mas novamente a robustez varia: classes secas ($<20\%$) possuem menos de $200$ registros, ao passo que classes úmidas ($>60\%$) reúnem dezenas de milhares de observações, conferindo maior confiabilidade à conclusão de que altos valores de $\mathrm{RH}$ estão associados a irradiância reduzida. No caso da temperatura (Figura~\ref{fig:swd_temp}), observa-se crescimento da média de $\mathrm{SWD}$ até cerca de $30^{\circ}$C; contudo, as classes acima desse valor apresentam forte queda no número de observações ($n_b=1{,}595$ em 31–35$^{\circ}$C e apenas $n_b=12$ em 35–39$^{\circ}$C), tornando inviável afirmar uma estabilização ou declínio consistente.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Média de $\mathrm{SWD}$ por intervalo de umidade relativa.}
+    \includegraphics[width=0.9\textwidth]{Figuras/SWD por RH.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:swd_rh}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \caption{Média de $\mathrm{SWD}$ por intervalo de pressão atmosférica.}
+    \includegraphics[width=0.9\textwidth]{Figuras/SWD por pressure.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:swd_press}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \caption{Média de $\mathrm{SWD}$ por intervalo de temperatura.}
+    \includegraphics[width=0.9\textwidth]{Figuras/SWD por TEMP .png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:swd_temp}
+\end{figure}
+
+De forma geral, a análise mostra que as distribuições temporais (ano, mês, hora e minuto) contam com elevado e, em muitos casos, homogêneo suporte amostral, legitimando conclusões robustas sobre ciclos sazonais e intradiários. Já as variáveis meteorológicas apresentam padrões relevantes, especialmente no caso da umidade relativa e da temperatura, mas a interpretação deve sempre considerar a concentração de dados em faixas intermediárias e a escassez nos extremos. Assim, a análise descritiva evidencia tanto os determinantes físicos da irradiância quanto os limites impostos pela disponibilidade amostral em determinadas condições.
+
+
+
+
+
+
+
+
+
+
+% \begin{figure}[!h]
+%     \centering
+%     \caption{Média de $\mathrm{SWD}$ por classes de $k_t^{*}$.}
+%     \includegraphics[width=0.85\textwidth]{figuras/swd_por_kt.png}
+%     \par\small{Fonte: Autor (2025)}
+%     \label{fig:swd_kt}
+% \end{figure}
+
+\FloatBarrier
+
+
+
+% \subsection{Sazonalidade e ciclos diários}
+
+% A Figura~\ref{fig:swdday} resume o perfil intradiário da irradiância. Verifica-se o crescimento exponencial a partir do nascer do sol, atingindo máximo próximo ao meio-dia solar ($\approx 644$ W/m$^2$ às 12h) e posterior declínio até o pôr do sol. Esse padrão em formato gaussiano é típico de séries de irradiância e confirma a necessidade de modelos capazes de capturar periodicidade horária.
+
+% A Figura~\ref{fig:swdmonth} mostra a sazonalidade anual, com máximos médios em dezembro ($414$ W/m$^2$) e janeiro ($408$ W/m$^2$) e mínimos em junho ($169$ W/m$^2$) e julho ($179$ W/m$^2$), refletindo a geometria solar do hemisfério sul. Esse ciclo anual justifica a adoção de variáveis sazonais (como seno e cosseno do mês) na modelagem.
+
+% \begin{figure}[!h]
+%     \centering
+%     \caption{Média de $\mathrm{SWD}$ por hora do dia (perfil intradiário).}
+%     \includegraphics[width=0.85\textwidth]{figuras/swd_por_hora.png}
+%     \par\small{Fonte: Autor (2025)}
+%     \label{fig:swdday}
+% \end{figure}
+
+% \begin{figure}[!h]
+%     \centering
+%     \caption{Média de $\mathrm{SWD}$ por mês do ano (sazonalidade anual).}
+%     \includegraphics[width=0.85\textwidth]{figuras/swd_por_mes.png}
+%     \par\small{Fonte: Autor (2025)}
+%     \label{fig:swdmonth}
+% \end{figure}
+
+\subsection{Correlação entre variáveis}
+
+As matrizes de Pearson e Spearman, Figura~\ref{fig:corr} e Figura~\ref{fig:corr1}, respectivamente,  mostram que a variável temporal transformada hora sazonal é o preditor individual mais associado à irradiância: a correlação é forte e positiva tanto em Spearman ($\rho\approx0{,}81$) quanto em Pearson ($r\approx0{,}75$). Esse ganho, frente à correlação praticamente nula com a hora bruta ($\rho\approx-0{,}13$; $r\approx-0{,}09$), confirma que a transformação cossenoidal lineariza o ciclo intradiário e preserva a monotonicidade esperada com o ângulo zenital solar. Em seguida, destacam-se a temperatura do ar, com correlação positiva moderada e estável entre os métodos ($\rho\approx0{,}47$; $r\approx0{,}48$), e a umidade relativa, com correlação negativa moderada a forte e igualmente estável ($\rho\approx-0{,}57$; $r\approx-0{,}60$). A sazonalidade anual transformada \textit{mes\_sazonal} apresenta correlação positiva de baixa a moderada ($\rho\approx0{,}25$; $r\approx0{,}27$), superior à do \textit{mes} categorizado ($\rho\approx0{,}03$; $r\approx0{,}03$), reforçando que a codificação cíclica também favorece o aprendizado do padrão sazonal. As demais variáveis temporais (\textit{dia}, \textit{minuto} e \textit{ano}) exibem correlações próximas de zero, e a pressão atmosférica mantém associação muito fraca com $\mathrm{SWD}$ em ambas as métricas ($\rho\approx0{,}02$; $r\approx0{,}03$).
+
+Comparando-se os dois coeficientes, observou-se que Spearman tende a realçar levemente relações monotônicas não estritamente lineares: isso aparece sobretudo em \textit{hora\_sazonal}, cuja força aumenta de $r\approx0{,}75$ para $\rho\approx0{,}81$, sugerindo pequeno desvio de linearidade no ciclo diurno que ainda assim é capturado como monotônico. Para temperatura e umidade relativa, os valores são praticamente coincidentes entre Pearson e Spearman, indicando que, no escopo amostral, as relações com $\mathrm{SWD}$ são aproximadamente lineares. Já a \textit{hora} bruta ganha (em módulo) na correlação de Spearman em relação a Pearson, efeito compatível com a forma não linear (em “arco”) do ciclo intradiário quando não transformado.
+
+As correlações entre preditores ajudam a antecipar redundâncias: \textit{mes\_sazonal} apresenta correlação moderada com temperatura ($\rho\approx0{,}61$; $r\approx0{,}60$) e moderada negativa com pressão ($\rho\approx-0{,}49$; $r\approx-0{,}50$); temperatura é moderadamente anticorrelacionada a umidade relativa ($\rho\approx-0{,}50$; $r\approx-0{,}50$) e a pressão ($\rho\approx-0{,}52$; $r\approx-0{,}53$); \textit{hora\_sazonal} correlaciona-se de forma leve a moderada com temperatura ($\rho\approx0{,}33$; $r\approx0{,}33$) e negativamente com umidade relativa ($\rho\approx-0{,}42$; $r\approx-0{,}42$). Tais associações sugerem atenção à multicolinearidade em modelos lineares; para esses casos, recomenda-se priorizar as codificações sazonais (\textit{hora\_sazonal} e \textit{mes\_sazonal}) em lugar das versões brutas (\textit{hora} e \textit{mes}), e empregar regularização. Em modelos baseados em árvores, a redundância tende a ser menos crítica, mas a preferência por codificações cíclicas mantém-se vantajosa por favorecer separações mais simples.
+
+Em síntese, as variáveis mais promissoras para previsão de $\mathrm{SWD}$, à luz da Figura~\ref{fig:corr}, são: \textit{hora\_sazonal} (maior correlação direta), \textit{RH} (maior correlação inversa), \textit{Temp} (correlação direta moderada) e \textit{mes\_sazonal} (efeito sazonal anual capturado de forma mais linear). As variáveis \textit{hora} e \textit{mes} podem ser descartadas em favor de suas versões sazonais; \textit{dia}, \textit{minuto}, \textit{ano} e \textit{Pressure} mostram baixo potencial explicativo isolado e devem ser incluídas, se for o caso, apenas como controles ou para capturar efeitos de interação. Considerando que Spearman foi ligeiramente mais sensível às relações monotônicas induzidas pelas transformações cíclicas, adotou-se sua leitura como referência para interpretar força ordinal das associações, mantendo-se Pearson como verificação de linearidade. Essa dupla leitura sustenta a decisão de engenharia de variáveis e orienta a parcimônia na seleção de preditores.
+
+
+\begin{figure}[!h]
+    \centering
+    \caption{Matriz de correlação de Pearson.}
+    \includegraphics[width=0.95\textwidth]{Figuras/Pearson.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:corr}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \caption{Matriz de correlação de Spearman.}
+    \includegraphics[width=0.95\textwidth]{Figuras/Spearman.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:corr1}
+\end{figure}
+
+\subsection{Síntese da Análise Exploratória (DEA)}
+
+A DEA, ancorada nas distribuições univariadas (com $n_b$ reportado no topo de cada barra) e nas matrizes de correlação (Figura~\ref{fig:corr}), permitiu consolidar evidências sobre sazonalidade, condicionamento atmosférico e seleção de preditores. O pré-processamento adotado assegurou suporte homogêneo por hora e minuto — dias com lacunas superiores a 30 minutos foram removidos integralmente — e as codificações sazonais (\textit{hora\_sazonal} e \textit{mes\_sazonal}) foram construídas com bins de largura igual, evitando quebras artificiais.
+
+\begin{itemize}
+    \item \textbf{Sazonalidade e codificação cíclica.} O ciclo intradiário foi capturado de forma quase linear por \textit{hora\_sazonal}, que apresentou a correlação mais forte com $\mathrm{SWD}$ (Spearman $\approx 0{,}81$; Pearson $\approx 0{,}75$), superando amplamente a \textit{hora} bruta (correlações próximas de zero). No ciclo anual, \textit{mes\_sazonal} exibiu associação positiva baixa a moderada (Spearman $\approx 0{,}25$; Pearson $\approx 0{,}27$), superior à do \textit{mes} categorizado. Esse resultado confirma a vantagem de codificadores sazonais para modelos supervisionados.
+    \item \textbf{Condicionamento atmosférico.} Temperatura do ar mostrou correlação positiva moderada e consistente entre métricas (Spearman/Pearson $\approx 0{,}47$–$0{,}48$); umidade relativa apresentou correlação negativa moderada a forte (Spearman $\approx -0{,}57$; Pearson $\approx -0{,}60$). Em contraste, pressão atmosférica manteve associação muito fraca com $\mathrm{SWD}$. A interpretação em caudas deve ser cautelosa: classes extremas de temperatura ($>31^{\circ}\mathrm{C}$), umidade muito baixa ($<18\%$) e pressões nos extremos possuem $n_b$ reduzido, elevando a incerteza das médias.
+    \item \textbf{Completude e robustez amostral.} As segmentações por hora ($n_b=9{,}712$ por classe) e minuto ($n_b=38{,}848$) apresentaram suporte equilibrado por decisão metodológica; por dia do mês houve queda natural de $n_b$ nos dias 29–31; por ano observou-se heterogeneidade marcante (p.ex., 2013 com $n_b=256$ versus 2010–2011 com $n_b>23{,}000$), o que explica parte da variabilidade anual nas médias.
+    \item \textbf{Implicações para seleção de preditores.} Recomenda-se priorizar \textit{hora\_sazonal}, \textit{Temp}, \textit{RH} e \textit{mes\_sazonal} como conjunto básico. As versões brutas \textit{hora} e \textit{mes} podem ser substituídas por suas codificações cíclicas. Variáveis com correlação próxima de zero (\textit{dia}, \textit{minuto}, \textit{ano} e \textit{Pressure}) tendem a ter baixo poder explicativo isolado e, se incluídas, devem atuar como controles ou em termos de interação. Quando disponível, a componente de céu claro ou o índice de transmitância ($k_t^{*}$) permanece como candidato relevante para distinguir cenários de nebulosidade.
+    \item \textbf{Leitura de correlações e modelagem.} Spearman destacou de forma ligeiramente superior relações monotônicas não estritamente lineares — especialmente em \textit{hora\_sazonal} — enquanto Pearson confirmou a proximidade de linearidade para \textit{Temp} e \textit{RH}. Para modelos lineares, recomenda-se regularização para mitigar multicolinearidade entre preditores sazonais e meteorológicos (p.ex., correlação entre \textit{mes\_sazonal} e \textit{Temp}); em modelos baseados em árvores, as codificações cíclicas ainda favorecem separações mais parcimoniosas.
+\end{itemize}
+
+Em conjunto, os achados confirmam a adequação da base e a eficácia das decisões de engenharia de dados (remoção de dias incompletos e codificação cíclica), ao mesmo tempo em que delineiam um conjunto parcimonioso e informativo de variáveis. A evidência empírica respalda o avanço para a etapa de modelagem, na qual se espera que preditores sazonais e meteorológicos — com ênfase em \textit{hora\_sazonal}, \textit{Temp}, \textit{RH} e \textit{mes\_sazonal} — ofereçam ganhos de precisão e generalização, desde que a avaliação considere a heterogeneidade de suporte amostral observada nas diferentes classes.
+

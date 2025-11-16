@@ -1,0 +1,18 @@
+\section{Resultados do ARIMA}
+
+O processo de seleção automática de parâmetros (\texttt{auto\_arima}) indicou que a estrutura mais adequada para a série de irradiância foi o modelo ARIMA$(2,0,0)(1,0,0)_{64}$ com intercepto. Essa configuração combina dois termos autorregressivos de curta defasagem e um componente sazonal diário, coerente com a periodicidade de 24 horas da irradiância solar amostrada em intervalos de 15 minutos ($s=64$).
+
+A previsão in-sample obtida pelo modelo é apresentada na Figura~\ref{fig:arima_resultados}, no período de 14 a 16 de janeiro de 2016. Observa-se que a curva prevista ($SWD_{ARIMA}(t)$) acompanha de forma satisfatória a tendência suave da série observada, reproduzindo adequadamente o padrão de subida e descida ao longo do ciclo diário. Pequenas discrepâncias surgem em horários próximos ao pico, quando a cobertura de nuvens provoca variações abruptas na irradiância.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão in-sample do modelo ARIMA e resíduos correspondentes no período de 14 a 16 de janeiro de 2016.}
+    \includegraphics[width=0.95\textwidth]{Figuras/ARIMA.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:arima_resultados}
+\end{figure}
+\FloatBarrier
+A série de resíduos ($Res_{ARIMA}(t)$) apresenta comportamento característico de oscilações rápidas, concentradas em torno do meio-dia solar. Essas oscilações decorrem de flutuações de nebulosidade que o modelo linear não é capaz de reproduzir. 
+
+Nesse sentido, apenas o resíduo $Res_{ARIMA}(t)$ foi incorporado ao conjunto de variáveis explicativas. Tal decisão fundamenta-se no fato de que o resíduo carrega informação adicional sobre irregularidades atmosféricas de curta duração, atuando como uma \textit{feature} auxiliar para os modelos de aprendizado de máquina (LSTM e XGBoost). Dessa forma, espera-se que a inclusão dessa variável contribua para capturar padrões não lineares e melhorar a acurácia das previsões.
+

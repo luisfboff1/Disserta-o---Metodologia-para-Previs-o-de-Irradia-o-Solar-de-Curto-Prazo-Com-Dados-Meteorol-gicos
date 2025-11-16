@@ -1,0 +1,193 @@
+\section{Resultados com XGBoost}
+
+\subsection{XGBoost base (sem variáveis adicionais)}
+
+Com o objetivo de estabelecer uma comparação direta com o desempenho obtido pela rede LSTM, foi implementado o modelo XGBoost utilizando a mesma estrutura de partição de dados, compreendendo os períodos de treino (2009--2012), validação (2015) e teste (2016). As mesmas variáveis explicativas foram consideradas, preservando-se a coerência entre os experimentos. 
+
+Entretanto, diferentemente da abordagem sequencial da LSTM, o XGBoost requer que cada amostra de entrada seja representada como um vetor unidimensional. Dessa forma, conforme o procedimento ilustrado na função de criação de janelas deslizantes, as sequências temporais de entrada (\textit{input window}) foram achatadas em um vetor de dimensão $(64 \times n_{\text{variáveis}})$, mantendo as mesmas 64 saídas (\textit{output window}) previstas para o horizonte de um dia subsequente. Assim, o modelo foi estruturado como um conjunto de 64 regressões independentes, em que cada regressão corresponde à previsão da irradiância em um instante futuro $t+k$, sendo $k = 1, 2, \ldots, 64$. Após o treinamento, as saídas foram recombinadas para compor a curva completa de previsão diária.
+
+As dimensões dos conjuntos utilizados foram as seguintes: o conjunto de treino apresentou $86\,017$ amostras, o de validação $15\,936$, e o de teste $21\,312$, correspondendo exatamente às mesmas divisões temporais empregadas na LSTM. Como o XGBoost já apresenta robustez frente a diferentes escalas e distribuições das variáveis, optou-se por não realizar normalização adicional das entradas.
+
+O desempenho global do modelo, considerando o conjunto de teste, foi de RMSE igual a \textbf{146,40~W/m²} e coeficiente de determinação $R^2$ de \textbf{0,792}. Esses resultados indicam melhoria em relação ao modelo LSTM base, tanto em termos de erro médio quanto na proporção de variância explicada. Tal ganho pode ser atribuído à capacidade do XGBoost em capturar relações não lineares complexas entre as variáveis preditoras e a irradiância, mesmo sem dependências explícitas entre os instantes temporais consecutivos.
+
+A avaliação qualitativa foi conduzida a partir de três casos representativos, os mesmos utilizados na análise da LSTM, de modo a possibilitar uma comparação direta entre os comportamentos dos modelos. As Figuras~\ref{fig:xgb_base_normal}, \ref{fig:xgb_base_normal_chuvoso} e \ref{fig:xgb_base_chuvoso_normal} apresentam, respectivamente, um dia típico de céu claro, um caso de transição \textbf{normal $\rightarrow$ chuvoso} e um caso de transição \textbf{chuvoso $\rightarrow$ normal}.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão com XGBoost base em dia típico de céu claro (20/01/2016).}
+    \includegraphics[width=0.95\textwidth]{Figuras/XBOOST DIA 20 FEATURE 1.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:xgb_base_normal}
+\end{figure}
+
+No dia de céu claro (Figura~\ref{fig:xgb_base_normal}), observa-se que o XGBoost foi capaz de reproduzir adequadamente o padrão diário da irradiância, com boa correspondência entre os valores previstos e observados ao longo de todo o período diurno. A curva estimada manteve suavidade e coerência física, com leve subestimação próxima ao pico, mas sem deslocamentos significativos. Esse resultado evidencia a boa capacidade do modelo em lidar com padrões regulares e contínuos, característicos de dias estáveis.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão com XGBoost base em caso de transição normal $\rightarrow$ chuvoso (15/05/2016).}
+    \includegraphics[width=0.95\textwidth]{Figuras/XBOOST DIA 15 FEATURE 1.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:xgb_base_normal_chuvoso}
+\end{figure}
+
+Já no cenário de transição de um dia normal para um dia chuvoso (Figura~\ref{fig:xgb_base_normal_chuvoso}), o modelo apresentou tendência de superestimação, prevendo valores de irradiância superiores aos observados. Essa limitação decorre do fato de o XGBoost basear-se apenas nas condições do dia anterior, que neste caso era de céu limpo. Assim, o modelo não dispõe de informação contextual suficiente para antecipar a queda abrupta de irradiância provocada pela nebulosidade repentina. Ainda assim, é possível notar que o modelo acompanha parcialmente o formato da curva observada, com redução da irradiância nas horas da tarde, o que indica alguma sensibilidade às variações sazonais internas.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão com XGBoost base em caso de transição chuvoso $\rightarrow$ normal (19/04/2016).}
+    \includegraphics[width=0.95\textwidth]{Figuras/XBOOST DIA 19 FEATURE 1.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:xgb_base_chuvoso_normal}
+\end{figure}
+
+Por outro lado, na transição de um dia chuvoso para um dia normal (Figura~\ref{fig:xgb_base_chuvoso_normal}), observa-se um comportamento de subestimação no período de maior irradiância. Tal efeito decorre da influência das condições anteriores — de baixa irradiância — sobre as predições subsequentes. No entanto, o modelo ainda é capaz de capturar adequadamente a forma geral da curva, apresentando ajuste superior ao obtido pela LSTM no mesmo cenário. 
+
+De forma geral, o XGBoost apresentou desempenho mais consistente e menos sujeito a oscilações abruptas entre dias consecutivos, especialmente nos períodos de céu claro. Sua principal limitação reside na incapacidade de antecipar mudanças súbitas nas condições atmosféricas, o que reforça a importância da inclusão de variáveis meteorológicas exógenas (como previsão de nebulosidade e temperatura) nas etapas posteriores desta pesquisa.
+
+A Tabela~\ref{tab:resultados_xgb} apresenta o resumo comparativo de desempenho do modelo XGBoost base em relação ao modelo LSTM base, considerando o conjunto de teste.
+
+\begin{table}[!h]
+    \centering
+    \caption{Desempenho comparativo entre os modelos LSTM e XGBoost base.}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Modelo} & \textbf{RMSE (W/m²)} & \textbf{$R^2$} \\
+        \hline
+        LSTM base (sem variáveis adicionais) & 159,24 & 0,7538 \\
+        XGBoost base (sem variáveis adicionais) & \textbf{146,40} & \textbf{0,7920} \\
+        \hline
+    \end{tabular}
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:resultados_xgb}
+\end{table}
+\FloatBarrier
+
+
+
+    
+\subsection{XGBoost com resíduo ARIMA}
+
+Seguindo o mesmo procedimento aplicado ao modelo LSTM, foi realizada uma nova avaliação do XGBoost com a inclusão do resíduo do ARIMA, $Res_{ARIMA}(t)$, como variável auxiliar de entrada. As demais configurações do modelo, incluindo a estrutura de janelas, divisão dos conjuntos e hiperparâmetros de treinamento, foram mantidas inalteradas. Assim, o acréscimo dessa variável teve como objetivo verificar se o XGBoost, mesmo sendo um modelo estático baseado em gradiente de árvores, seria capaz de aproveitar a informação residual derivada da modelagem linear de curto prazo.
+
+Com a adição de $Res_{ARIMA}(t)$, observou-se uma melhora discreta nas métricas globais, alcançando RMSE de \textbf{146,32~W/m²} e $R^2$ de \textbf{0,792} no conjunto de teste. Embora represente um ganho, esse resultado foi significativamente menor do que o obtido pela LSTM ao incorporar a mesma variável. Essa diferença pode ser explicada pelo fato de que, enquanto a LSTM é sensível à evolução temporal das entradas e pode explorar o resíduo como um sinal dinâmico adicional, o XGBoost o trata apenas como uma variável estática, sem contexto sequencial. Assim, parte do potencial informativo do resíduo acaba diluído no processo de agregação das janelas achatadas.
+
+Em virtude do ganho modesto e da pouca variação visual nas curvas de previsão, optou-se por não apresentar as figuras correspondentes a essa variante. Ainda assim, a inclusão de $Res_{ARIMA}(t)$ será mantida nas próximas etapas experimentais, que incorporam variáveis meteorológicas previstas, uma vez que mesmo um acréscimo marginal nas métricas já indica contribuição positiva e estabilidade estatística ao conjunto de entradas.
+
+
+
+De forma geral, conforme sintetizado na Tabela~\ref{tab:resultados_xgb_residuo}, o XGBoost apresentou desempenho superior ao da LSTM mesmo em sua configuração base, e o acréscimo do resíduo ARIMA, embora de efeito marginal, manteve o modelo ligeiramente mais preciso. Esse resultado reforça a robustez do método de árvores de gradiente para previsão de irradiância solar horária e justifica o uso de $Res_{ARIMA}(t)$ nas variantes subsequentes, que incluirão previsores meteorológicos exógenos.
+
+\begin{table}[!h]
+    \centering
+    \caption{Desempenho comparativo entre modelos LSTM e XGBoost (com e sem resíduo ARIMA).}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Modelo} & \textbf{RMSE (W/m²)} & \textbf{$R^2$} \\
+        \hline
+        LSTM base (sem variáveis adicionais) & 159,24 & 0,7538 \\
+        XGBoost base (sem variáveis adicionais) & 146,40 & 0,7920 \\
+        LSTM + $Res_{ARIMA}(t)$ & 157,40 & 0,7595 \\
+        XGBoost + $Res_{ARIMA}(t)$ & \textbf{146,32} & \textbf{0,7920} \\
+        \hline
+    \end{tabular}
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:resultados_xgb_residuo}
+\end{table}
+\FloatBarrier
+
+
+
+
+    
+\subsection{XGBoost com variáveis de previsão meteorológica}
+
+Nesta configuração, o modelo XGBoost foi estendido com a inclusão das variáveis provenientes das previsões meteorológicas — temperatura do ar, umidade relativa e pressão atmosférica —, mantidas as mesmas janelas de entrada e saída utilizadas nas versões anteriores. A incorporação dessas variáveis teve como objetivo fornecer ao modelo informações exógenas sobre o estado atmosférico esperado, ampliando sua capacidade de antecipar variações abruptas na irradiância solar.
+
+O impacto da inclusão dessas variáveis foi significativo: o modelo alcançou RMSE de \textbf{91,83~W/m²} e $R^2$ de \textbf{0,918} no conjunto de teste. Esse resultado representa um salto expressivo em relação às variantes anteriores — tanto o XGBoost base (RMSE 146,40~W/m²; $R^2$ 0,792) quanto o XGBoost com resíduo ARIMA (RMSE 146,32~W/m²; $R^2$ 0,792) —, evidenciando que o uso de previsores meteorológicos é o fator de maior impacto até o momento.
+
+A Figura~\ref{fig:xgb_prev_meteo_normal_chuvoso} apresenta o caso representativo de transição \textbf{normal $\rightarrow$ chuvoso}. Observa-se que, diferentemente das versões anteriores, o modelo conseguiu ajustar-se melhor à redução súbita de irradiância, reproduzindo o comportamento real de forma mais próxima. Embora ainda haja leve superestimação nos horários iniciais, a curva prevista segue com boa fidelidade as flutuações observadas, o que demonstra a efetividade do acréscimo das variáveis meteorológicas na caracterização das condições atmosféricas.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão com XGBoost + variáveis de previsão meteorológica em transição normal $\rightarrow$ chuvoso.}
+    \includegraphics[width=0.95\textwidth]{Figuras/XBOOST DIA 15 FEATURE 2.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:xgb_prev_meteo_normal_chuvoso}
+\end{figure}
+
+Os resultados apresentados confirmam a relevância das informações meteorológicas para a previsão de irradiância solar de curto prazo. Enquanto o XGBoost base dependia unicamente do histórico da própria série, a adição de variáveis exógenas permitiu capturar melhor a influência de fenômenos atmosféricos externos, reduzindo expressivamente o erro médio e elevando o coeficiente de determinação para valores próximos de 0,92.
+
+A Tabela~\ref{tab:resultados_xgb_atualizada} apresenta o resumo comparativo dos modelos testados até esta etapa. Nota-se que o XGBoost com previsores meteorológicos alcançou o melhor desempenho global, superando tanto as variantes LSTM quanto suas próprias versões anteriores sem variáveis exógenas.
+
+\begin{table}[!h]
+    \centering
+    \caption{Resumo atualizado de desempenho dos modelos XGBoost e LSTM.}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Modelo} & \textbf{RMSE (W/m²)} & \textbf{$R^2$} \\
+        \hline
+        LSTM base (sem variáveis adicionais) & 159,24 & 0,7538 \\
+        XGBoost base (sem variáveis adicionais) & 146,40 & 0,7920 \\
+        LSTM + $Res_{ARIMA}(t)$ & 157,40 & 0,7595 \\
+        XGBoost + $Res_{ARIMA}(t)$ & 146,32 & 0,7920 \\
+        LSTM + previsores meteorológicos & 103,10 & 0,8968 \\
+        XGBoost + previsores meteorológicos & \textbf{91,83} & \textbf{0,9180} \\
+        \hline
+    \end{tabular}
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:resultados_xgb_atualizada}
+\end{table}
+\FloatBarrier
+
+De maneira geral, conforme evidenciado na Tabela~\ref{tab:resultados_xgb_atualizada}, a incorporação das variáveis meteorológicas elevou substancialmente a acurácia das previsões. O modelo XGBoost, que já apresentava bom desempenho com dados históricos, mostrou-se capaz de integrar de forma eficiente as informações exógenas, obtendo previsões mais estáveis e fisicamente coerentes. Esse resultado demonstra o potencial do algoritmo para aplicações operacionais de previsão solar de curto prazo, especialmente quando combinado a fontes de dados meteorológicos confiáveis.
+
+    
+\subsection{XGBoost com variáveis de previsão meteorológica com ruído}
+
+Por fim, foi avaliado o impacto da utilização de variáveis de previsão meteorológica sujeitas a incerteza. Para tal, adicionou-se um ruído aleatório de até $\pm 5\%$ sobre os valores previstos de temperatura, umidade relativa e pressão atmosférica, simulando um cenário mais realista em que previsões meteorológicas estão sujeitas a erros. Todas as demais configurações foram mantidas inalteradas em relação à variante com previsores ``exatos'', de modo a isolar o efeito do ruído.
+
+Com essa configuração, o XGBoost apresentou RMSE de \textbf{97,02~W/m²} e $R^2$ de \textbf{0,909} no conjunto de teste. Observa-se, portanto, uma leve piora frente ao uso das previsões sem ruído (RMSE 91,83~W/m²; $R^2$ 0,918), porém o desempenho permanece substancialmente superior às variantes sem previsores meteorológicos. A Figura~\ref{fig:xgb_prev_meteo_ruido_normal_chuvoso} ilustra o caso de transição \textbf{normal $\rightarrow$ chuvoso}: nota-se que o modelo mantém boa aderência ao formato da curva observada, ainda que com discretas superestimações em horários de pico, indicando \textit{robustez} do método à presença de incertezas moderadas nas entradas.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão com XGBoost + variáveis de previsão meteorológica com ruído em transição normal $\rightarrow$ chuvoso.}
+    \includegraphics[width=0.95\textwidth]{Figuras/XBOOST DIA 15 FEATURE 3.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:xgb_prev_meteo_ruido_normal_chuvoso}
+\end{figure}
+
+Em síntese, a introdução de ruído nas variáveis meteorológicas reduziu marginalmente as métricas globais, mas o modelo manteve desempenho elevado e coerência física das previsões. Os resultados consolidados encontram-se na Tabela~\ref{tab:resultados_xgb_ruido}, que compara diretamente todas as variantes avaliadas para LSTM e XGBoost.
+
+\begin{table}[!h]
+    \centering
+    \caption{Desempenho comparativo dos modelos LSTM e XGBoost (variantes com e sem previsores, e com ruído).}
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Modelo} & \textbf{RMSE (W/m²)} & \textbf{$R^2$} \\
+        \hline
+        LSTM base (sem variáveis adicionais) & 159,24 & 0,7538 \\
+        LSTM + $Res_{ARIMA}(t)$ & 157,40 & 0,7595 \\
+        LSTM + previsores meteorológicos & 103,10 & 0,8968 \\
+        LSTM + previsores meteorológicos (com ruído) & 104,21 & 0,8945 \\
+        \hline
+        XGBoost base (sem variáveis adicionais) & 146,40 & 0,7920 \\
+        XGBoost + $Res_{ARIMA}(t)$ & 146,32 & 0,7920 \\
+        XGBoost + previsores meteorológicos  & 91,83 & 0,9180 \\
+        XGBoost + previsores meteorológicos (com ruído) & \textbf{97,02} & \textbf{0,9090} \\
+        \hline
+    \end{tabular}
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:resultados_xgb_ruido}
+\end{table}
+\FloatBarrier
+
+
+    
+\subsection{Otimização de hiperparâmetros do XGBoost}
+    
+\subsection{Configurações avaliadas}
+        
+\subsection{Impacto nos resultados}
+        
+\subsection{Melhores combinações encontradas}
+        

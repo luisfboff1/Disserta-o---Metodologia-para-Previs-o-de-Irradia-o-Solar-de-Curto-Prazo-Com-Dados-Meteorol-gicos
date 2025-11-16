@@ -1,0 +1,98 @@
+[33mtag v1.0-cursor[m
+Tagger: luisfboff1 <luisfboff@gmail.com>
+Date:   Sat Sep 13 10:15:07 2025 -0300
+
+Primeira versão exportada do Cursor - Estrutura base da dissertação
+
+[33mcommit e301ebd89c8d7435d81c3aab70dfa04cbe7155a7[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;33mtag: [m[1;33mv1.0-cursor[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: luisfboff <luisfboff@hotmail.com>
+Date:   Sat Sep 13 12:55:17 2025 +0000
+
+    Update on Overleaf.
+
+[1mdiff --git "a/1. Introdu\303\247\303\243o/1.2 Objetivo.tex" "b/1. Introdu\303\247\303\243o/1.2 Objetivo.tex"[m
+[1mnew file mode 100644[m
+[1mindex 0000000..bad55ca[m
+[1m--- /dev/null[m
+[1m+++ "b/1. Introdu\303\247\303\243o/1.2 Objetivo.tex"[m	
+[36m@@ -0,0 +1,16 @@[m
+[32m+[m
+[32m+[m[32m\section{Objetivos}[m
+[32m+[m
+[32m+[m[32mO objetivo principal deste trabalho é \textbf{prever a irradiância solar para o dia seguinte com resolução temporal de 15 minutos}, utilizando dados históricos de irradiância e variáveis meteorológicas associadas. A previsão em horizontes intra diários tem relevância direta para o planejamento e a operação de sistemas de energia elétrica, em especial para a integração de fontes renováveis intermitentes.[m
+[32m+[m
+[32m+[m[32mA fim de viabilizar o objetivo principal, foram estabelecidos os seguintes objetivos secundários:[m
+[32m+[m
+[32m+[m[32m\begin{itemize}[m
+[32m+[m[32m    \item Avaliar diferentes arquiteturas de modelagem, incluindo redes neurais recorrentes (LSTM e variações), modelos híbridos (ARIMA--LSTM, RSTL--LSTM, Attention) e modelos baseados em árvores (XGBoost).[m
+[32m+[m[32m    \item Analisar o impacto das variáveis de entrada, comparando desempenhos obtidos com variáveis exclusivamente meteorológicas, exclusivamente históricas da irradiância e combinações entre ambas.[m
+[32m+[m[32m    \item Investigar a influência de diferentes tamanhos de janelas de entrada (\textit{input window}) e horizontes de saída (\textit{output window}), verificando sua contribuição para a qualidade preditiva.[m
+[32m+[m[32m    \item Realizar a otimização de hiperparâmetros relevantes de cada arquitetura, tais como número de camadas, número de neurônios, taxa de aprendizado, \textit{dropout} e, no caso de modelos baseados em árvores, profundidade e número de estimadores.[m
+[32m+[m[32m    \item Comparar os modelos em termos de desempenho e generalização, empregando métricas globais e por horizonte, com destaque para RMSE e $R^2$, a fim de identificar quais arquiteturas apresentam melhor compromisso entre acurácia, robustez e interpretabilidade.[m
+[32m+[m[32m    \item Explorar a aplicabilidade prática dos modelos propostos, discutindo suas vantagens e limitações em cenários reais de previsão solar, bem como suas perspectivas de integração em sistemas de gestão e operação de energia.[m
+[32m+[m[32m\end{itemize}[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git "a/2. Revis\303\243o Bibliogr\303\241fica/2.1 Estado da arte.tex" "b/2. Revis\303\243o Bibliogr\303\241fica/2.1 Estado da arte.tex"[m
+[1mnew file mode 100644[m
+[1mindex 0000000..8a7ac0b[m
+[1m--- /dev/null[m
+[1m+++ "b/2. Revis\303\243o Bibliogr\303\241fica/2.1 Estado da arte.tex"[m	
+[36m@@ -0,0 +1,164 @@[m
+[32m+[m[32m\section{Estado da Arte}[m
+[32m+[m[32m\label{sec:estado-da-arte}[m
+[32m+[m
+[32m+[m[32mPara fundamentar este trabalho, foi conduzida uma revisão bibliográfica nas bases \textit{Scopus} e \textit{Google Scholar}, utilizando palavras-chave relacionadas à previsão de irradiação solar: \textit{solar radiation}, \textit{irradiance}, \textit{prediction}, \textit{forecast}, \textit{short-term}, \textit{meteorological data}. A busca retornou 39.208 documentos. Após filtragens (remoção de trabalhos anteriores a 1970 e itens não relacionados diretamente à irradiação/energia solar), obteve-se um conjunto consolidado de 15.317 referências únicas.[m
+[32m+[m
+[32m+[m[32m\subsection{Produção científica e distribuição geográfica}[m
+[32m+[m
+[32m+[m[32mA Figura~\ref{fig:pubs_ano} mostra a evolução anual das publicações. Observa-se crescimento moderado até meados de 2010, seguido de uma aceleração a partir de 2015, compatível com a popularização de técnicas de \textit{deep learning} e maior disponibilidade de séries meteorológicas/reanálises. Esse comportamento sugere aumento de interesse tanto em previsões de curto prazo para operação quanto em horizontes maiores para planejamento energético.[m
+[32m+[m
+[32m+[m[32m\begin{figure}[!h][m
+[32m+[m[32m    \centering[m
+[32m+[m[32m    \caption{Publicações ao longo do tempo na área de previsão de irradiação solar.}[m
+[32m+[m[32m    \includegraphics[width=0.9\textwidth]{2. Revisão Bibliográfica/Figuras/publicações ao longo do ano.png}[m
+[32m+[m[32m    \par\small{Fonte: Autor (2025)}[m
+[32m+[m[32m    \label{fig:pubs_ano}[m
+[32m+[m[32m\end{figure}[m
+[32m+[m
+[32m+[m
+[32m+[m[32mA Figura~\ref{fig:paises} apresenta os quinze países com maior volume de publicações. Estados Unidos e China lideram, seguidos pela Índia e países europeus. O Brasil aparece em 13º lugar, indicando presença relevante da comunidade nacional, mas ainda com espaço para ampliação de esforços em previsões de curto prazo de irradiância solar.[m
+[32m+[m
+[32m+[m[32m\begin{figure}[!h][m
+[32m+[m[32m    \centering[m
+[32m+[m[32m    \caption{Top 15 países em número de publicações.}[m
+[32m+[m[32m    \includegraphics[width=0.9\textwidth]{2. Revisão Bibliográfica/Figuras/top paises.png}[m
+[32m+[m[32m    \par\small{Fonte: Autor (2025)}[m
+[32m+[m[32m    \label{fig:paises}[m
+[32m+[m[32m\end{figure}[m
+[32m+[m
+[32m+[m
+[32m+[m[32m\subsection{Modelos utilizados e sua evolução temporal}[m
+[32m+[m
+[32m+[m[32mO mapeamento por dicionário de sinônimos revelou os modelos com maior recorrência, como mostra a Figura~\ref{fig:modelos_bar}. ANN/MLP e LSTM dominam, seguidos por SVR/SVM, Random Forest e CNN. Em seguida, algoritmos de \textit{boosting} (XGBoost/GBDT), métodos clássicos de séries (ARIMA/SARIMA) e persistência aparecem como referências frequentes.[m
+[32m+[m
+[32m+[m[32m\begin{figure}[!h][m
+[32m+[m[32m    \centering[m
+[32m+[m[32m    \caption{Modelos mais utilizados na literatura levantada.}[m
+[32m+[m[32m    \includegraphics[width=0.9\textwidth]{2. Revisão Bibliográfica/Figuras/Modelos mais utilizados.png}[m
+[32m+[m[32m    \par\small{Fonte: Autor (2025)}[m
+[32m+[m[32m    \label{fig:modelos_bar}[m
+[32m+[m[32m\end{figure}[m
+[32m+[m
+[32m+[m
+[32m+[m[32mA Figura~\ref{fig:modelos_tempo} detalha a evolução temporal dos cinco modelos mais citados. Observa-se:[m
+[32m+[m[32m\begin{itemize}[m
+[32m+[m[32m    \item \textbf{ANN/MLP}: presença constante desde os anos 2000, com função de \textit{baseline} não linear e uso recorrente em combinações/ensembles.[m
+[32m+[m[32m    \item \textbf{LSTM}: crescimento pronunciado após 2015, associado à capacidade de modelar dependências de longo alcance e não linearidades em séries meteorológicas.[m
+[32m+[m[32m    \item \textbf{SVR/SVM}: pico intermediário e estabilidade posterior; segue competitivo em bases menores e com seleção cuidadosa de atributos.[m
+[32m+[m[32m    \item \textbf{Random Forest}: desempenho sólido em dados tabulares com variáveis meteorológicas, bom como referência robusta.[m
+[32m+[m[32m    \item \textbf{CNN}: curva ascendente recente, especialmente em \textit{nowcasting}/curtíssimo prazo ou quando convoluções 1D capturam padrões locais da série.[m
+[32m+[m[32m\end{itemize}[m
+[32m+[m
+[32m+[m[32m\begin{figure}[!h][m
+[32m+[m[32m    \centering[m
+[32m+[m[32m    \caption{Evolução temporal (contagem anual) dos cinco modelos mais utilizados.}[m
+[32m+[m[32m    \includegraphics[width=0.9\textwidth]{2. Revisão Bibliográfica/Figuras/evolução modelos.png}[m
+[32m+[m[32m    \par\small{Fonte: Autor (2025)}[m
+[32m+[m[32m  

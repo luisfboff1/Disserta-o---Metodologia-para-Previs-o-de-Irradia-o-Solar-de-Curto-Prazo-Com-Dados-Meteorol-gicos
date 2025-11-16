@@ -1,0 +1,66 @@
+\section{Irradiância Solar: definições, distinções e modelagens}
+
+\subsection{Conceitos de radiação, irradiância e irradiação}
+
+A energia proveniente do Sol viaja sob a forma de radiação eletromagnética, constituída por fótons com diferentes frequências. Quando se estuda o recurso solar, empregam-se três termos relacionados, mas com significados distintos:
+
+\textbf{Irradiação} (\emph{solar irradiation} ou \emph{insolation}) refere-se à quantidade de energia solar recebida por unidade de área ao longo de um intervalo de tempo. A unidade usual é MJ/m$^{2}$ ou kWh/m$^{2}$. A irradiação é um valor acumulado – por exemplo, a energia solar incidente em uma superfície horizontal durante um dia ou mês. (\cite{solargis_components}~)
+
+\textbf{Irradiância} (\emph{solar irradiance}) é a potência instantânea recebida por unidade de área. Representa a densidade de fluxo de energia (W/m$^{2}$) em um determinado instante (\cite{solargis_components}~). Como a irradiância mede energia por tempo (potência), ela pode ser convertida em irradiação pela integração no intervalo desejado (por exemplo, integrar as leituras de irradiância para cada período 15 minutos).
+
+\textbf{Radiação solar} pode referir-se genericamente à energia eletromagnética emitida pelo Sol. Em contextos meteorológicos, o termo \emph{radiação solar global} (ou radiação global) costuma ser sinônimo de irradiância global horizontal (GHI).
+
+Outra distinção importante é entre a energia incidente \emph{extraterrestre} e a energia terrestre. A irradiância extraterrestre considera a potência recebida fora da atmosfera, sem atenuação por gases ou aerossóis. A irradiância terrestre mede a potência que chega à superfície, sendo atenuada e distribuída em componentes.
+
+\subsection{Componentes da irradiância terrestre}
+
+A irradiância ou irradiação, que atinge uma superfície horizontal ou inclinada, é composta por pela parcela direta, difusa e global, conforme ilustra a Figura~\ref{fig:irradiação}.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Tipos de irradiações.}
+    \includegraphics[width=0.7\textwidth]{2. Revisão Bibliográfica/Figuras/IRRADIAÇÕES.png}
+    \par\small{Fonte: Tiepolo et al. (2017)}
+    \label{fig:irradiação}
+\end{figure}
+
+% \newpage
+
+
+\begin{itemize}
+    \item \textbf{Irradiância direta}: corresponde à porção da luz solar que chega à superfície sem sofrer espalhamento atmosférico. Esse componente é maior em dias claros e é medido em uma superfície normal ao Sol (\cite{solargis_components}~).
+    \item \textbf{Irradiância difusa}: resulta do espalhamento de partículas e moléculas na atmosfera. Em dias nublados ou com elevada turbidez, grande parte da energia chega à superfície como difusa (\cite{solargis_components}~).
+    \item \textbf{Irradiância global}: soma dos componentes direto e difuso numa superfície. Para uma superfície horizontal, chama-se GHI (\emph{Global Horizontal Irradiance}), enquanto que para uma superfície normal ao Sol chama-se DNI (\emph{Direct Normal Irradiance}) (\cite{pvpmc_insolation}~).
+\end{itemize}
+
+Os instrumentos usados para medir esses componentes também diferem: piranômetros convencionais registram o fluxo hemisférico (180° de campo de visão) e, portanto, medem GHI; pirheliógrafos (ou piranômetros com anteparos) têm campo de visão de aproximadamente 5° para medir apenas o feixe direto (\cite{pvpmc_insolation}~).
+
+Além do plano de medição, é necessário especificar a orientação da superfície de coleta. A irradiância pode ser medida em uma superfície horizontal (GHI), normal ao Sol (DNI) ou em um plano inclinado (\emph{plane-of-array}) (\cite{pvpmc_insolation}~). Para converter irradiância em energia (irradiação) em uma superfície inclinada, a posição do Sol (elevação, azimute) e o ângulo de inclinação da superfície precisam ser considerados.
+
+\FloatBarrier
+
+\subsection{Irradiância extraterrestre e modelagem matemática}
+
+A energia recebida na parte superior da atmosfera varia com a distância Terra–Sol e com a posição da Terra na órbita. A FAO apresenta a fórmula para a irradiação extraterrestre diária sobre uma superfície horizontal:
+
+\begin{equation}
+    R_{a} = \frac{24 \times 60}{\pi} \, G_{sc} \, d_{r} \Big[ \omega_{s} \sin\phi \sin\delta + \cos\phi\cos\delta \sin\omega_{s} \Big]
+    \label{eq:ra}
+\end{equation}
+\noindent
+Em que $G_{sc}=0{,}0820$ MJ/m$^{2}\,\text{min}$ é a constante solar; $d_{r}$ representa a distância relativa Terra–Sol em função do dia Juliano; $\delta$ é a declinação solar (rad); $\omega_{s}$ corresponde ao ângulo horário ao nascer e ao pôr do Sol (rad); e $\phi$ é a latitude (rad).
+
+
+A fórmula demonstra que o valor de $R_{a}$ depende fortemente da latitude e da época do ano. Em latitudes baixas (trópicos) a amplitude anual é menor, resultando em valores de irradiância extraterrestre mais elevados e pouco variáveis. Para latitudes mais altas, as variações sazonais são maiores. Em outras palavras, a latitude determina o ângulo solar máximo e o comprimento do dia; no hemisfério Sul (latitudes negativas) as estações são defasadas em relação ao hemisfério Norte. A longitude, por sua vez, influencia o horário local (fuso horário), mas não altera o valor da irradiância instantânea (apenas determina em que momento do dia ocorre o pico).
+
+
+\subsection{Brasil: recurso solar e variação regional}
+
+Devido à sua localização majoritariamente entre as latitudes 5°N e 33°S, o Brasil possui elevado potencial de energia solar. Regiões próximas ao equador, como Norte e Nordeste, apresentam altos valores de irradiância global média anual (superior a 5,0 kWh/m$^{2}.dia$). Já na região Sul (latitudes >25°S), a sazonalidade é mais pronunciada e a média anual é menor ($\sim$4,0–4,5 kWh/m$^{2}.dia$), porém ainda competitiva em relação a países europeus.
+
+Por exemplo, Fortaleza (3°S) apresenta pouca variação sazonal (diferença entre verão e inverno $<20\%$), enquanto Caxias do Sul (29°S) observa variações bem mais acentuadas devido à maior inclinação do eixo terrestre.
+
+
+A distinção entre irradiância (potência instantânea) e irradiação (energia acumulada) é essencial para comparar estudos e dimensionar sistemas solares. A irradiância extraterrestre fornece um limite teórico de potência, cuja variação diária e sazonal depende da latitude. Para estimar a irradiância real na superfície, consideram-se as componentes direto e difuso e as perdas por absorção/espalhamento na atmosfera. No Brasil, as elevadas irradiâncias, especialmente nas regiões tropicais, combinadas com uma variabilidade sazonal relativamente baixa, conferem ótimo potencial para geração fotovoltaica. Modelos e métricas corretas (RMSE, MAE, nRMSE, etc.) são fundamentais para avaliar previsões de irradiância de curto prazo e integrar a geração solar à operação de redes elétricas.
+
+

@@ -1,0 +1,154 @@
+\section{XGBoost}
+\subsection{Janelamento da série}
+
+Para a modelagem via XGBoost será adotado o esquema de janelas deslizantes, sem qualquer normalização de variáveis. Considere-se a série alvo $y_t$ (irradiância global) e o vetor de preditores $\mathbf{x}_t \in \mathbb{R}^{p}$ em frequência de 15 minutos. Serão definidas uma janela de entrada de comprimento $L$ e um horizonte de previsão de comprimento $H$, ambos em passos de 15 minutos. A construção dos pares entrada--saída para cada instante $t$ será dada pelas Equações (\ref{eq:x_window})--(\ref{eq:dataset_direct}).
+
+\begin{equation}
+\mathbf{X}_t = \big[\, \mathbf{x}_{t-L+1}, \mathbf{x}_{t-L+2}, \ldots, \mathbf{x}_{t} \,\big] \in \mathbb{R}^{L \times p}
+\label{eq:x_window}
+\end{equation}
+
+\noindent
+Em que $\mathbf{x}_{t}$ será o vetor de $p$ preditores no instante $t$, $L$ será o número de passos históricos considerados na entrada e $\mathbf{X}_t$ empilhará, por tempo, os $L$ vetores de preditores mais recentes.
+
+\begin{equation}
+\mathbf{y}_t = \big[\, y_{t+1}, y_{t+2}, \ldots, y_{t+H} \,\big] \in \mathbb{R}^{H}
+\label{eq:y_window}
+\end{equation}
+
+\noindent
+Em que $y_{t+h}$ será a irradiância alvo no horizonte $h \in \{1,\ldots,H\}$ e $H$ será o número de passos futuros a serem previstos (aqui, $H=64$, equivalente a 16 horas).
+
+Como o XGBoost opera sobre vetores em $\mathbb{R}^d$, será aplicado o operador de \textit{flatten} (vetorização) à janela de entrada, conforme a Equação (\ref{eq:flatten}). Ressalta-se que não será realizada normalização nem padronização; as variáveis permanecerão em suas unidades originais.
+\begin{equation}
+\mathbf{z}_t = \operatorname{vec}(\mathbf{X}_t) \in \mathbb{R}^{L \cdot p}
+\label{eq:flatten}
+\end{equation}
+
+\noindent
+Em que $\operatorname{vec}(\cdot)$ concatenará linha a linha (ou por tempo) os elementos de $\mathbf{X}_t$, resultando em um vetor de dimensão $L \cdot p$, e $\mathbf{z}_t$ será a representação vetorial final fornecida ao XGBoost.
+
+O conjunto de dados para aprendizado direto multi-passo será então dado por:
+\begin{equation}
+\mathcal{D} \;=\; \big\{\, (\mathbf{z}_t, \mathbf{y}_t) \;\big|\; t = L, \ldots, T-H \,\big\}.
+\label{eq:dataset_direct}
+\end{equation}
+
+\noindent
+Em que $T$ será o último índice temporal disponível na base e $\mathcal{D}$ conterá todos os pares entrada--saída válidos respeitando a causalidade temporal.
+
+\subsection{Modelagem XGBoost direta com $H$ modelos (um por passo)}
+
+Será adotada a estratégia direta (\textit{direct multi-step forecasting}), na qual serão treinados $H$ modelos independentes $\{f_1,\ldots,f_H\}$, cada qual mapeando $\mathbf{z}_t \mapsto y_{t+h}$. Para cada horizonte $i \in \{1,\ldots,H\}$, o problema empírico otimizado pelo XGBoost será descrito pela Equação (\ref{eq:xgb_obj}), com regularização estrutural sobre o conjunto de árvores $\mathcal{F}_{\mathrm{XGB}}$.
+\begin{equation}
+\widehat{f}_i \;=\; \arg\min_{f \in \mathcal{F}_{\mathrm{XGB}}} 
+\;\sum_{(\mathbf{z}, y_i) \in \mathcal{D}} \big(y_i - f(\mathbf{z})\big)^2 \;+\; \Omega(f)
+\label{eq:xgb_obj}
+\end{equation}
+
+\noindent
+Em que $y_i$ denotará o elemento $i$ de $\mathbf{y}_t$ (isto é, $y_{t+i}$), $\mathcal{F}_{\mathrm{XGB}}$ será a classe de funções implementada por \textit{gradient boosting} sobre árvores de decisão e $\Omega(f)$ penalizará a complexidade do conjunto de árvores (número de folhas, profundidade, pesos), controlando viés--variância.
+
+O vetor de previsões para uma entrada $\mathbf{z}_t$ será composto pela concatenação das saídas individuais conforme a Equação (\ref{eq:aggregate_preds}), com imposição de não negatividade para refletir a natureza física da irradiância conforme a Equação (\ref{eq:nonneg_clip}).
+\begin{equation}
+\widehat{\mathbf{y}}_t \;=\; 
+\big[\, \widehat{f}_1(\mathbf{z}_t), \widehat{f}_2(\mathbf{z}_t), \ldots, \widehat{f}_H(\mathbf{z}_t) \,\big]
+\label{eq:aggregate_preds}
+\end{equation}
+
+\noindent
+Em que $\widehat{\mathbf{y}}_t$ conterá as $H$ previsões futuras em 15 minutos cada.
+
+\begin{equation}
+\widehat{f}_i^{+}(\mathbf{z}_t) \;=\; \max\big\{\,0,\, \widehat{f}_i(\mathbf{z}_t)\,\big\}
+\label{eq:nonneg_clip}
+\end{equation}
+
+\noindent
+Em que $\widehat{f}_i^{+}$ será a versão \textit{clipped} da predição, restringindo valores negativos.
+
+\subsection{Espalhamento temporal e avaliação por horizonte}
+
+Após a predição em janelas de teste, será realizado o espalhamento das previsões no eixo temporal, de modo que cada $\widehat{f}_i^{+}(\mathbf{z}_t)$ seja alocada no timestamp $t+i$. Em instantes $\tau$ com sobreposição de janelas, será considerada a média das contribuições conforme a Equação \ref{eq:spread_mean} e o desvio-padrão associado conforme a Equação \ref{eq:spread_std}, permitindo análise por horizonte e agregada.
+\begin{equation}
+\widehat{y}_{\tau} \;=\; \frac{1}{\lvert \mathcal{T}(\tau) \rvert}
+\sum_{(t,i)\,:\,t+i=\tau} \widehat{f}_i^{+}(\mathbf{z}_t)
+\label{eq:spread_mean}
+\end{equation}
+
+\noindent
+Em que $\mathcal{T}(\tau)$ será o conjunto de pares $(t,i)$ cujas previsões incidirem em $\tau$ e $\widehat{y}_{\tau}$ será a predição agregada no instante $\tau$.
+
+\begin{equation}
+\widehat{\sigma}_{\tau} \;=\; 
+\sqrt{\,\frac{1}{\lvert \mathcal{T}(\tau) \rvert - 1}\sum_{(t,i)\,:\,t+i=\tau}
+\Big(\widehat{f}_i^{+}(\mathbf{z}_t) - \widehat{y}_{\tau}\Big)^2\,}
+\label{eq:spread_std}
+\end{equation}
+
+\noindent
+Em que $\widehat{\sigma}_{\tau}$ quantificará a incerteza empírica por sobreposição de janelas no instante $\tau$.
+
+Para avaliação global multi-saída, será utilizada a raiz do erro quadrático médio (RMSE) agregando instantes e horizontes, conforme Equação (\ref{eq:rmse_multi}).
+\begin{equation}
+\mathrm{RMSE} \;=\; \sqrt{\frac{1}{N \cdot H}\sum_{t}\sum_{i=1}^{H}
+\Big(\widehat{f}_i^{+}(\mathbf{z}_t) - y_{t+i}\Big)^2}
+\label{eq:rmse_multi}
+\end{equation}
+
+\noindent
+Em que $N$ será o número de janelas no conjunto considerado (treino, validação ou teste) e $H$ será o horizonte de previsão (aqui, $H=64$).
+
+A opção por esta métrica global se justificará pela necessidade de comparabilidade direta com outros modelos de previsão multi-passo, como a rede LSTM apresentada anteriormente. No caso da LSTM, a avaliação também considerará janelas deslizantes de entrada e agregará os erros em todos os horizontes previstos. Dessa forma, a definição de RMSE global na Equação (\ref{eq:rmse_multi}) garantirá que ambos os modelos sejam avaliados sob o mesmo critério de desempenho, assegurando uma comparação justa e consistente entre abordagens de natureza distinta.
+
+\subsection{Treinamento, validação e empacotamento em MLflow}
+
+O treinamento será realizado de forma sequencial por horizonte, com \textit{early stopping} e \textit{watchlist} de treino/validação interno ao XGBoost. Será considerado, para cada $i \in \{1,\ldots,H\}$, um \texttt{DMatrix} com as colunas alvo $y_{t+i}$ e as entradas $\mathbf{z}_t$. Será adotado \texttt{num\_boost\_round} elevado, aliado a \texttt{early\_stopping\_rounds}, de modo a permitir convergência estável sem sobreajuste. Como salvaguarda física, será aplicado o truncamento não negativo em todas as saídas conforme visto na Equação (\ref{eq:nonneg_clip}).
+
+Com vistas à operacionalização, os $H$ modelos resultantes serão incorporados a uma única classe Python do tipo \texttt{mlflow.pyfunc.PythonModel}. Tal classe: (i) carregará os artefatos \texttt{model\_i.json} ($i=1,\ldots,H$) e metadados de \textit{features} utilizadas; (ii) ao receber um lote de entradas, organizará as \textit{features} conforme o treino, aplicará todos os $\widehat{f}_i$ e concatenará as saídas conforme Equação (\ref{eq:aggregate_preds}); e (iii) devolverá $\widehat{\mathbf{y}}$ com truncamento não negativo. O artefato final será registrado no MLflow como um único modelo. Assim, a inferência será chamada de forma direta e transparente, embora internamente sejam executados os $H$ preditores especializados. Esse empacotamento facilitará a reprodutibilidade, a comparação entre execuções e a integração com pipelines.
+
+\subsection{Função principal de treinamento/validação}
+
+Será implementada uma função principal de treino/validação por saída, responsável por treinar o modelo do horizonte $i$, avaliar RMSE e $R^2$ em treino, validação e teste, e registrar parâmetros, métricas e artefatos no MLflow. A função receberá, entre outros, as janelas \texttt{X\_train}, \texttt{X\_val}, \texttt{X\_test}, os respectivos alvos colunares (\texttt{y\_train[:, i]}, \texttt{y\_val[:, i]}, \texttt{y\_test[:, i]}), e o dicionário de hiperparâmetros do XGBoost, conforme a Tabela \ref{tab:param_xgb_train}. Em termos conceituais, sua ação corresponderá à minimização da Equação \ref{eq:xgb_obj} e à composição final da Equação (\ref{eq:aggregate_preds}), com salvaguarda de não negatividade conforme a Equação (\ref{eq:nonneg_clip}).
+
+\begin{table}[H]
+    \centering
+    \caption{Principais parâmetros da função \texttt{treinar\_modelo\_saida\_booster}.}
+    \resizebox{0.95\textwidth}{!}{%
+    \begin{tabular}{|l|p{10cm}|}
+        \hline
+        \textbf{Parâmetro} & \textbf{Descrição} \\
+        \hline
+        \texttt{input\_window} ($L$) & Comprimento da janela de entrada (nº de passos históricos). \\
+        \hline
+        \texttt{output\_window} ($H$) & Horizonte de previsão (nº de passos futuros; aqui $H=64$). \\
+        \hline
+        \texttt{features} & Lista e ordem das variáveis preditoras utilizadas na vetorização (\textit{flatten}). \\
+        \hline
+        \texttt{target} & Variável alvo (irradiância global $y_t$). \\
+        \hline
+        \texttt{stride} ($s$) & Passo de deslizamento entre janelas sucessivas. \\
+        \hline
+        \texttt{flatten\_X} & Indicador de vetorização das janelas ($\mathbf{X}_t \mapsto \mathbf{z}_t$); necessário para XGBoost. \\
+        \hline
+        \texttt{params} & Hiperparâmetros do XGBoost (p.\,ex., \texttt{learning\_rate}, \texttt{max\_depth}, \texttt{min\_child\_weight}, \texttt{gamma}, \texttt{lambda}, \texttt{alpha}, \texttt{tree\_method}, \texttt{device}, \texttt{eval\_metric}). \\
+        \hline
+        \texttt{num\_boost\_round} & Número máximo de iterações de boosting. \\
+        \hline
+        \texttt{early\_stopping\_rounds} & Critério de parada antecipada com base no conjunto de validação. \\
+        \hline
+        \texttt{mlflow\_experiment\_name} & Nome do experimento no MLflow para rastreamento. \\
+        \hline
+        \texttt{seed} & Semente para reprodutibilidade. \\
+        \hline
+        \texttt{clip\_non\_negative} & Aplicação de truncamento não negativo às predições. \\
+        \hline
+    \end{tabular}
+    }
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:param_xgb_train}
+\end{table}
+
+Optar-se-á por não normalizar as variáveis por três razões práticas: (i) modelos de árvores serão pouco sensíveis à escala, (ii) preservar-se-á a interpretabilidade física em unidades originais ao longo do pipeline e (iii) evitar-se-á potencial viés de \textit{leakage} na aplicação de transformações dependentes do conjunto. A estratégia direta com $H$ modelos oferecerá ganhos de especialização por horizonte (curto vs.\ longo prazo) e evitará o acúmulo de erro típico de abordagens recursivas.
+
+A generalidade da função de treinamento por horizonte, parametrizada por $L$, $H$, \texttt{features}, \texttt{stride} e \texttt{params}, permitirá replicar facilmente: (a) otimizações de hiperparâmetros (substituindo-se \texttt{params} por amostras geradas por um otimizador externo); (b) estudos de sensibilidade (p.\,ex., variar \texttt{max\_depth}/\texttt{min\_child\_weight}); (c) testes de ablação de variáveis (incluir/excluir subconjuntos de \texttt{features}); e (d) mudanças de $L$ e $H$ sem alterações estruturais no código. O empacotamento em uma classe \texttt{pyfunc} no MLflow garantirá que, mesmo com $H$ modelos internos, a interface de predição permaneça unificada, facilitando reuso e implantação.

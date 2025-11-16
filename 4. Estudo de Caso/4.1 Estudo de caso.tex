@@ -1,0 +1,193 @@
+\section{Estudo de Caso: Estação BSRN de São Martinho da Serra (SMS)}
+
+\subsection{Fonte dos dados, localização e instrumentação}
+
+Foi utilizada a base pública do repositório PANGAEA referente à estação BSRN de São Martinho da Serra (SMS, código 70), a qual disponibiliza arquivos mensais categorizados como \textit{Basic measurements of radiation at station São Martinho da Serra (YYYY–MM)}. Todos os meses \textbf{disponíveis} foram baixados e \textbf{concatenados} em um único conjunto antes das análises, uma vez que a distribuição original é segmentada por mês. A estação está situada nas coordenadas $-29{,}44278^{\circ}$ (latitude), $-53{,}82305^{\circ}$ (longitude) e elevação de $489$~m. As variáveis principais empregadas foram a irradiância global de onda curta à superfície (\textit{Shortwave Downwelling Radiation} — SWD), a temperatura do ar a $2$~m, a umidade relativa e a pressão atmosférica (\cite{Pereira_2018_SMS_Basic_2016_10}~).
+
+Após a concatenação de todos os meses, foram contabilizados \textbf{5.416.497} registros, de minuto em minuto. Considerando que as séries originais são fornecidas em UTC, realizou-se a conversão para o fuso horário local (UTC$-3$), de modo a alinhar fisicamente os horários de nascer e pôr do sol com a dinâmica intradiária observada. Essa decisão viabiliza a interpretação energética por hora do dia e reduz artefatos temporais.
+
+A análise de completude evidenciou diferenças relevantes na disponibilidade de dados entre os anos. Verificou-se que 2008 (42,29\%), 2013 (25,64\%) e 2017 (55,17\%) apresentaram perdas expressivas de registros, enquanto outros anos, como 2010 (0,00\%) e 2014 (0,14\%), apresentaram séries quase completas. Essa caracterização inicial é essencial, pois permite identificar previamente os períodos mais adequados para modelagem, bem como justificar a exclusão de anos com grandes lacunas. O resumo anual é apresentado na Tabela~\ref{tab:faltantes_ano}.
+
+\begin{table}[!h]
+    \centering
+    \caption{Resumo anual de dados faltantes.}
+    \begin{tabular}{|c|r|r|r|}
+        \hline
+        \textbf{Ano} & \textbf{Minutos esperados} & \textbf{Minutos faltantes} & \textbf{\% faltante} \\
+        \hline
+        2006 & 525.600 & 129.601 & 24,66\% \\
+        2007 & 525.600 & 1       & 0,00\% \\
+        2008 & 527.040 & 222.875 & 42,29\% \\
+        2009 & 525.600 & 480     & 0,09\% \\
+        2010 & 525.600 & 0       & 0,00\% \\
+        2011 & 525.600 & 1.414   & 0,27\% \\
+        2012 & 527.040 & 78.789  & 14,95\% \\
+        2013 & 525.600 & 134.777 & 25,64\% \\
+        2014 & 525.600 & 726     & 0,14\% \\
+        2015 & 525.600 & 16.740  & 3,18\% \\
+        2016 & 527.040 & 19.657  & 3,73\% \\
+        2017 & 525.600 & 289.963 & 55,17\% \\
+        \hline
+    \end{tabular}
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:faltantes_ano}
+\end{table}
+
+Além da base BSRN, foram avaliadas outras fontes de dados. Considerou-se o uso do \textit{Helioclim}, que fornece estimativas de irradiância obtidas por satélite (\cite{Lefevre_2014_Helioclim}~), mas tais valores são simulados e não resultam de medições diretas em superfície, o que pode comprometer análises mais sensíveis à variabilidade local. Também foram testados os dados do Instituto Nacional de Meteorologia (INMET), que disponibiliza séries medidas em estações meteorológicas de superfície (\cite{INMET_2020}~), porém apenas em resolução horária, insuficiente para capturar a dinâmica minuto a minuto requerida neste estudo. 
+
+Dessa forma, a escolha pela base BSRN justifica-se por três aspectos principais: 
+(i) os dados são medidos diretamente por instrumentação em solo; 
+(ii) apresentam resolução temporal de um minuto; 
+(iii) possuem padronização internacional de qualidade e consistência. 
+Essas características tornam a BSRN a opção mais adequada para o objetivo de previsão intradiária de irradiância solar.
+
+
+
+\FloatBarrier
+
+
+\subsection{Pré-processamento e variáveis derivadas}
+
+Inicialmente, aplicou-se reamostragem para janelas de $15$ minutos por média, conforme Equação~(\ref{eq:reamostragem}), harmonizando a resolução temporal com os horizontes preditivos e suavizando flutuações de alta frequência. Em seguida, foi estimada a irradiância de céu limpo via modelo físico (Ineichen, conforme metodologia), a partir da qual definiu-se o índice de claridade $k_t^{*}$ pela Equação~(\ref{eq:ktstar}). O índice foi truncado para $[0,1]$, mitigando eventuais distorções instrumentais e preservando o significado físico de transmitância atmosférica efetiva.
+
+Por fim, adotaram-se codificações sazonais contínuas para hora e mês com $\cos^2(\cdot)$, conforme Equação~(\ref{eq:sazonal_unificada}), evitando descontinuidades entre categorias e fornecendo preditores suaves com suporte físico, ilustrados na Figura~\ref{fig:sazonal_hora_mes}. As novas variáveis apresentaram curvas suaves com pico alinhado ao meio-dia (hora) e ao verão austral (mês). Tais perfis são consistentes com o regime de radiação local e oferecem variáveis contínuas que evitam saltos artificiais entre categorias. Na modelagem, espera-se que essas codificações atuem como \textit{priors} físicos fracos, facilitando o aprendizado de padrões periódicos diários e anuais.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Codificação sazonal contínua: hora (esq.) e mês (dir.).}
+    \includegraphics[width=0.9\textwidth]{Figuras/hora e mes sazonal.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:sazonal_hora_mes}
+\end{figure}
+
+\FloatBarrier
+
+
+\subsection{Energia intradiária e justificativa da janela 5h–20h}
+
+A energia diária integrada sobre toda a série totalizou \textbf{$18{,}02$~MWh/m$^2$}. Esse valor foi obtido pela conversão da irradiância (potência por unidade de área, em W/m$^2$) em energia (Wh/m$^2$), considerando a soma das contribuições horárias. Na prática, o procedimento equivale à integral temporal da irradiância medida, ou seja, à multiplicação da potência média em cada intervalo de tempo pelo respectivo passo temporal (1~h), conforme ilustrado na Equação~(\ref{eq:energia_integrada}).
+
+\begin{equation}
+    E = \sum_{t=1}^{N} \overline{SWD}(t) \cdot \Delta t
+    \label{eq:energia_integrada}
+\end{equation}
+
+\noindent Em que:
+\begin{itemize}
+    \item $E$ representa a energia integrada [Wh/m$^2$];
+    \item $\overline{SWD}(t)$ é a irradiância média no intervalo $t$ [W/m$^2$];
+    \item $\Delta t$ corresponde ao intervalo temporal de integração [h];
+    \item $N$ é o número total de intervalos considerados no dia.
+\end{itemize}
+
+Não houve contribuição antes das 5h e após as 20h, conforme ilustra a Figura~\ref{fig:energia_por_hora}, de modo que a janela 5h–20h acarreta \textbf{perda nula} de energia. A distribuição por hora confirma o padrão diurno esperado, com máxima concentração entre 11h e 13h (11h: 13,17\%; 12h: 13,55\%; 13h: 12,92\%). Ao agregar por faixas, a janela 10h–14h responde por \textbf{52,3\%} da energia diária, enquanto 5h–9h e 15h–20h respondem por \textbf{23,1\%} e \textbf{24,6\%}, respectivamente. Esses achados sustentam a adoção da janela temporal para as etapas de análise e modelagem, priorizando o período energeticamente relevante.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Distribuição da energia solar diária por hora.}
+    \includegraphics[width=0.9\textwidth]{Figuras/distribuição energia.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:energia_por_hora}
+\end{figure}
+
+\FloatBarrier
+
+
+\subsection{Consistência, lacunas e interpolação}
+
+Para as análises e modelagem, foi adotada a janela operacional de \textbf{5h–20h}, período no qual se concentra praticamente toda a energia diária. Nessa janela, para toda a base, eram esperados \textbf{3.928.606} registros; identificaram-se \textbf{3.612.410} observações presentes e \textbf{316.196} ausentes ($8{,}05\%$).
+
+Com o intuito de preservar a grade temporal uniforme de 15 minutos, foram inicialmente inseridas linhas nos instantes faltantes. Em seguida, aplicou-se \textit{interpolação linear}, conforme Equação~(\ref{eq:interp_linear}) apenas para lacunas curtas, em que existiam valores válidos imediatamente antes e depois do \textit{gap}. Esse procedimento foi realizado para as variáveis SWD (9.436 pontos), temperatura (17.654), umidade relativa (11.351), pressão (5.084), $\mathrm{SWD}_{\mathrm{clear\_sky}}$ (4.803) e $k_t^{*}$ (4.803). 
+
+No entanto, quando as lacunas ultrapassavam 30 minutos, optou-se pela remoção do \textbf{dia inteiro}. Essa escolha metodológica garante consistência intradiária, evitando descontinuidades temporais que poderiam ser interpretadas de forma incorreta pelos modelos preditivos. Ao todo, \textbf{1.691 dias} foram eliminados. Assim, o conjunto final manteve \textbf{2.305.920 amostras} com grade temporal regular e fisicamente coerente.
+
+\begin{table}[H]
+    \centering
+    \caption{Tratamento de lacunas e consistência temporal (janela 5h–20h).}
+    \resizebox{\columnwidth}{!}{%
+    \begin{tabular}{|l|r|}
+        \hline
+        Registros esperados & 3.928.606 \\
+        \hline
+        Registros presentes & 3.612.410 \\
+        \hline
+        Faltantes (\%) & 316.196 (8{,}05\%) \\
+        \hline
+        Interpolados (SWD; Temp; RH; Pressure; $\mathrm{SWD}_{\mathrm{clear\_sky}}$; $k_t^{*}$)
+        & 9.436; 17.654; 11.351; 5.084; 4.803; 4.803 \\
+        \hline
+        Dias removidos ($>$30 min de falha) & 1.691 \\
+        \hline
+        Percentuais interpolados & SWD: 0{,}16\%; Temp: 0{,}31\%; RH: 0{,}20\%; Pressure: 0{,}09\%; $\mathrm{SWD}_{\mathrm{clear\_sky}}$: 0{,}08\%; $k_t^{*}$: 0{,}08\% \\
+        \hline
+        Exclusão total & 39{,}71\% \\
+        \hline
+        Base final (5h–20h) & 2.305.920 \\
+        \hline
+    \end{tabular}
+    }
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:gaps_sms}
+\end{table}
+
+
+
+\subsection{Envelope físico: SWD vs. céu limpo}
+
+Para avaliar o afastamento da série observada em relação ao limite físico local, foram comparadas as médias horárias de SWD e $\mathrm{SWD}_{\mathrm{clear\_sky}}$ para dois meses de referência (01/2015 e 02/2016). Conforme ilustrado na Figura~\ref{fig:swd_clearsky_2015_2016}, o céu limpo delineia um \textit{envelope} superior coerente com o máximo teórico próximo ao meio-dia solar, enquanto as séries observadas permanecem abaixo desse limite. Em 01/2015 observou-se maior proximidade entre as curvas ao redor do pico, ao passo que 02/2016 apresentou maior afastamento, compatível com atenuação por nebulosidade. Essa comparação fundamenta o uso de $k_t^{*}$ como preditor de transparência atmosférica e reforça a relevância de variáveis sazonais para capturar assimetrias intra-anuais.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Média horária de SWD e $\mathrm{SWD}_{\mathrm{clear\_sky}}$: 01/2015 vs. 02/2016.}
+    \includegraphics[width=0.9\textwidth]{Figuras/SWD VS CLEAR.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:swd_clearsky_2015_2016}
+\end{figure}
+
+
+
+\subsection{Estatística descritiva e indicadores}
+
+A análise estatística descritiva da base final está sintetizada na Tabela~\ref{tab:estat_desc_sms}. Observa-se que a irradiância global $\mathrm{SWD}$ apresenta média $\overline{\mathrm{SWD}}=293{,}09$~W/m$^2$ e desvio-padrão de $318{,}97$~W/m$^2$, enquanto a mediana é de apenas $170{,}13$~W/m$^2$. O valor mínimo encontrado foi $0$~W/m$^2$ (períodos noturnos), e o máximo $1305{,}27$~W/m$^2$. Essa combinação de média superior à mediana, aliada à assimetria entre valores mínimos e máximos, reflete a distribuição típica de séries de irradiância, em que longos períodos apresentam valores muito baixos e relativamente poucos instantes concentram valores elevados próximos ao pico solar.
+
+Para a irradiância sob céu limpo $\mathrm{SWD}_{\mathrm{clear\_sky}}$, a mediana de $346{,}94$~W/m$^2$ e o percentil 95 de $1025{,}21$~W/m$^2$ delineiam o \textit{envelope} físico esperado em condições atmosféricas ideais. O índice de transmitância $k_t^{*}$ apresentou média $0{,}798$ e mediana próxima a $1{,}0$, indicando elevada frequência de condições próximas ao céu limpo, embora haja dispersão (dp $0{,}299$) que traduz a variabilidade atmosférica associada à presença de nuvens.
+
+As variáveis meteorológicas também apresentam coerência física: a temperatura variou de $-2{,}93^{\circ}$C a $43{,}13^{\circ}$C, cobrindo desde eventos de inverno rigoroso até máximas de verão; a umidade relativa variou de aproximadamente $1{,}09\%$ até $101{,}94\%$, revelando tanto condições secas quanto situações de saturação; e a pressão atmosférica oscilou entre $943$ e $978$~hPa, intervalo compatível com a altitude da estação.  
+
+Essa caracterização é relevante porque estabelece a amplitude e a dispersão das variáveis de entrada, permitindo:  
+\begin{itemize}
+    \item validar a coerência física dos dados disponíveis;  
+    \item identificar a presença de assimetrias importantes que impactam a modelagem (particularmente a concentração de valores baixos em SWD);  
+    \item fornecer referência para a segmentação de cenários de céu limpo e nebulosidade por meio de $k_t^{*}$, a ser utilizada na avaliação do desempenho dos modelos.  
+\end{itemize}
+
+\begin{table}[H]
+    \centering
+    \caption{Estatísticas descritivas (resumo da base final, 5h–20h).}
+    \resizebox{0.9\textwidth}{!}{%
+    \begin{tabular}{|l|r|r|r|r|r|r|r|}
+        \hline
+        \textbf{Variável} & \textbf{count} & \textbf{média} & \textbf{dp} & \textbf{mín} & \textbf{mediana} & $P_{95}$ & \textbf{máx} \\
+        \hline
+        SWD [W/m$^2$] & 153.728 & 293{,}09 & 318{,}97 & 0{,}00 & 170{,}13 & 932{,}80 & 1.305{,}27 \\
+        \hline
+        $\mathrm{SWD}_{\mathrm{clear\_sky}}$ [W/m$^2$] & 153.728 & 388{,}06 & 359{,}21 & 0{,}00 & 346{,}94 & 1.025{,}21 & 1.117{,}04 \\
+        \hline
+        $k_t^{*}$ [--] & 153.728 & 0{,}798 & 0{,}299 & 0{,}00 & 0{,}999 & 1{,}000 & 1{,}000 \\
+        \hline
+        Temp [$^{\circ}$C] & 153.728 & 18{,}60 & 6{,}20 & -2{,}93 & 18{,}77 & 28{,}55 & 43{,}13 \\
+        \hline
+        RH [\%] & 153.728 & 76{,}97 & 18{,}64 & 1{,}09 & 79{,}12 & 100{,}55 & 101{,}94 \\
+        \hline
+        Pressure [hPa] & 153.728 & 960{,}31 & 4{,}62 & 943{,}00 & 960{,}00 & 968{,}00 & 978{,}00 \\
+        \hline
+    \end{tabular}
+    }
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:estat_desc_sms}
+\end{table}
+
+
+\subsection{Síntese interpretativa}
+
+Em síntese, a consolidação mensal dos arquivos da estação SMS (\cite{Pereira_2018_SMS_Basic_2016_10}~) resultou em um conjunto multivariado robusto para análise e modelagem de irradiância. O ajuste para UTC$-3$ e a adoção da janela 5h–20h foram determinantes para interpretar corretamente a distribuição intradiária de energia (perda nula fora da janela; pico concentrado em 11h–13h). A comparação SWD vs. céu limpo evidenciou o papel do $k_t^{*}$ como medida de transparência atmosférica, com médias elevadas e mediana próxima da unidade. O tratamento de lacunas combinou interpolação curta e exclusão de dias com falhas extensas, preservando a coerência física e temporal das séries. Por fim, as codificações sazonais contínuas fornecem preditores estruturados para capturar periodicidades diária e anual, cuja relevância será avaliada na seção de modelagem.

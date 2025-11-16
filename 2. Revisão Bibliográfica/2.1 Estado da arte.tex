@@ -1,0 +1,164 @@
+\section{Estado da Arte}
+\label{sec:estado-da-arte}
+
+Para fundamentar este trabalho, foi conduzida uma revisão bibliográfica nas bases \textit{Scopus} e \textit{Google Scholar}, utilizando palavras-chave relacionadas à previsão de irradiação solar: \textit{solar radiation}, \textit{irradiance}, \textit{prediction}, \textit{forecast}, \textit{short-term}, \textit{meteorological data}. A busca retornou 39.208 documentos. Após filtragens (remoção de trabalhos anteriores a 1970 e itens não relacionados diretamente à irradiação/energia solar), obteve-se um conjunto consolidado de 15.317 referências únicas.
+
+\subsection{Produção científica e distribuição geográfica}
+
+A Figura~\ref{fig:pubs_ano} mostra a evolução anual das publicações. Observa-se crescimento moderado até meados de 2010, seguido de uma aceleração a partir de 2015, compatível com a popularização de técnicas de \textit{deep learning} e maior disponibilidade de séries meteorológicas/reanálises. Esse comportamento sugere aumento de interesse tanto em previsões de curto prazo para operação quanto em horizontes maiores para planejamento energético.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Publicações ao longo do tempo na área de previsão de irradiação solar.}
+    \includegraphics[width=0.9\textwidth]{2. Revisão Bibliográfica/Figuras/publicações ao longo do ano.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:pubs_ano}
+\end{figure}
+
+
+A Figura~\ref{fig:paises} apresenta os quinze países com maior volume de publicações. Estados Unidos e China lideram, seguidos pela Índia e países europeus. O Brasil aparece em 13º lugar, indicando presença relevante da comunidade nacional, mas ainda com espaço para ampliação de esforços em previsões de curto prazo de irradiância solar.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Top 15 países em número de publicações.}
+    \includegraphics[width=0.9\textwidth]{2. Revisão Bibliográfica/Figuras/top paises.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:paises}
+\end{figure}
+
+
+\subsection{Modelos de previsão utilizados e sua evolução temporal}
+
+O mapeamento por dicionário de sinônimos revelou os modelos com maior recorrência, como mostra a Figura~\ref{fig:modelos_bar}. ANN/MLP e LSTM dominam, seguidos por SVR/SVM, Random Forest e CNN. Em seguida, algoritmos de \textit{boosting} (XGBoost/GBDT), métodos clássicos de séries (ARIMA/SARIMA) e persistência aparecem como referências frequentes.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Modelos mais utilizados na literatura levantada.}
+    \includegraphics[width=0.9\textwidth]{2. Revisão Bibliográfica/Figuras/Modelos mais utilizados.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:modelos_bar}
+\end{figure}
+
+
+A Figura~\ref{fig:modelos_tempo} detalha a evolução temporal dos cinco modelos mais citados. Observa-se:
+\begin{itemize}
+    \item \textbf{ANN/MLP}: presença constante desde os anos 2000, com função de \textit{baseline} não linear e uso recorrente em combinações/ensembles.
+    \item \textbf{LSTM}: crescimento pronunciado após 2015, associado à capacidade de modelar dependências de longo alcance e não linearidades em séries meteorológicas.
+    \item \textbf{SVR/SVM}: pico intermediário e estabilidade posterior; segue competitivo em bases menores e com seleção cuidadosa de atributos.
+    \item \textbf{Random Forest}: desempenho sólido em dados tabulares com variáveis meteorológicas, bom como referência robusta.
+    \item \textbf{CNN}: curva ascendente recente, especialmente em \textit{nowcasting}/curtíssimo prazo ou quando convoluções 1D capturam padrões locais da série.
+\end{itemize}
+
+\begin{figure}[!h]
+    \centering
+    \caption{Evolução temporal (contagem anual) dos cinco modelos mais utilizados.}
+    \includegraphics[width=0.9\textwidth]{2. Revisão Bibliográfica/Figuras/evolução modelos.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:modelos_tempo}
+\end{figure}
+
+
+\subsection{Horizontes de previsão}
+
+A Figura~\ref{fig:horizontes} mostra os horizontes mais abordados. O horizonte de \textbf{60 minutos} concentra a maior parte dos estudos, seguido pelo \textbf{diário} e, depois, pelo \textbf{15 minutos}. O domínio de 60 min aparece, em parte, pelo uso recorrente do modelo de \textit{persistência} como \textit{baseline} e por atender tanto cenários operacionais quanto testes metodológicos padronizados. O horizonte de 15 min, embora menos frequente, apresenta tendência de crescimento e possui forte potencial de aplicação em \textit{smart grids} e em sistemas de gerenciamento de carga residencial (\textit{HEMS}). Essa granularidade permite capturar variações rápidas da irradiância ao longo do dia, o que possibilita decisões mais precisas no acionamento de cargas, no uso de armazenamento e na resposta da rede a flutuações locais de geração fotovoltaica.
+
+
+\begin{figure}[!h]
+    \centering
+    \caption{Horizontes de previsão mais utilizados.}
+    \includegraphics[width=0.9\textwidth]{2. Revisão Bibliográfica/Figuras/horizontes mais utilizados.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:horizontes}
+\end{figure}
+
+
+\subsection{Variáveis de entrada e métricas de avaliação}
+
+A Figura~\ref{fig:variaveis} apresenta as variáveis mais empregadas. Nota-se \textbf{temperatura} com incidência muito superior, seguida de \textbf{umidade}, \textbf{velocidade do vento} e medidas radiométricas como \textbf{GHI}. Também aparecem \textbf{precipitação}, \textbf{pressão}, \textbf{nuvens}, \textbf{aerossóis} e insumos de reanálises/satélite (ERA5, MERRA, CAMS, etc.). Em termos de causalidade física, cobertura de nuvens, aerossóis e modelos de céu claro (\textit{clear\_sky}) têm papel direto na atenuação/variabilidade da irradiação; já variáveis termodinâmicas (temperatura, umidade) frequentemente atuam como proxies de condições de nebulosidade/estabilidade, o que explica sua ampla adoção. Esse cenário reforça a importância de seleção de atributos (\textit{feature selection}) e normalização temporal/estacional para evitar sobreajuste.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Variáveis mais utilizadas como preditoras.}
+    \includegraphics[width=0.9\textwidth]{2. Revisão Bibliográfica/Figuras/variaveis mais utilizadas.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:variaveis}
+\end{figure}
+
+
+A Figura~\ref{fig:metricas} apresenta as métricas de desempenho mais recorrentes. Observa-se destaque expressivo do \textbf{RMSE}, amplamente empregado como medida de erro quadrático médio e por sua interpretação direta em termos físicos da variável prevista. Em seguida aparecem o \textbf{MSE} e o \textbf{coeficiente de determinação ($R^2$)}, frequentemente utilizados em conjunto para avaliar simultaneamente a magnitude dos erros e a proporção da variabilidade explicada pelo modelo. Outras métricas, como \textbf{MAE}, \textbf{MAPE}, \textbf{MBE} e indicadores normalizados (\textbf{nRMSE}), surgem em menor escala, geralmente para complementar a análise. A ênfase em RMSE, MSE e $R^2$ reflete a busca por \textit{benchmarks} comparáveis na literatura, permitindo avaliação justa entre diferentes abordagens.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Métricas de avaliação mais utilizadas.}
+    \includegraphics[width=0.9\textwidth]{2. Revisão Bibliográfica/Figuras/Métricas mais utilizados.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:metricas}
+\end{figure}
+
+
+\subsection{Associações entre modelos, horizontes e variáveis}
+
+As matrizes de associação de modelos por horizonte e modelos por variáveis, conforme as Figuras~\ref{fig:assoc_mh} e~\ref{fig:assoc_mv}, respectivamente, indicam padrões consistentes:
+\begin{itemize}
+    \item \textbf{Persistência} destacada em \textbf{60 min} e \textbf{diário}, caracterizando o uso como \textit{baseline} universal.
+    \item \textbf{LSTM} com alta associação em \textbf{60 min} e \textbf{diário}, compatível com séries não lineares e dependências de médio prazo; presença relevante também quando combinações de variáveis meteorológicas são ricas.
+    \item \textbf{ARIMA/SARIMA} mais forte em \textbf{60 min}, favorecido por sazonalidade clara e estruturas AR que capturam autocorrelação de curto prazo.
+    \item \textbf{ANN/MLP} com bom desempenho em \textbf{60 min} e \textbf{diário}, muitas vezes como parte de \textit{ensembles}/híbridos.
+    \item \textbf{CNN} associada de forma mais evidente ao \textbf{15 min}, coerente com extração de padrões locais/rápidos por convoluções 1D e uso em \textit{nowcasting}.
+\end{itemize}
+Quanto às variáveis, os modelos baseados em aprendizado de máquina (LSTM, ANN, CNN, XGBoost) tendem a aproveitar conjuntos multivariados (temperatura, umidade, vento, nuvens, índices de céu claro e reanálises/satélite), enquanto \textit{time-series} clássicos (ARIMA) operam melhor com transformações da própria série de irradiação (e variações sazonais), por vezes auxiliados por \textit{exogenous regressors} simples.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Associação (normalizada) entre modelos e horizontes.}
+    \includegraphics[width=0.95\textwidth]{2. Revisão Bibliográfica/Figuras/MC modelos x horizonte.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:assoc_mh}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \caption{Associação (normalizada) entre modelos e variáveis.}
+    \includegraphics[width=0.95\textwidth]{2. Revisão Bibliográfica/Figuras/MC modelos x variaveis.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:assoc_mv}
+\end{figure}
+
+% \newpage
+\FloatBarrier
+
+\subsection{Síntese crítica e direcionamento}
+
+Os resultados indicam três pontos práticos para projetos de previsão:
+\begin{enumerate}
+    \item \textbf{Horizonte de 15 min}: menos explorado que 60 min e diário, porém em crescimento — alinhado a necessidades de operação (\textit{rampas} rápidas de GHI/PV, despacho de armazenamento, \textit{demand response} e qualidade de energia).
+    \item \textbf{Modelagem}: \textbf{LSTM} e \textbf{CNN} são adequados a dinâmicas rápidas e não lineares; \textbf{XGBoost} é competitivo em dados tabulares multivariados; \textbf{ARIMA} funciona como referência de série; \textbf{Persistência} permanece como \textit{baseline} mandatória para comparação justa.
+    \item \textbf{Variáveis}: combinar medidas radiométricas (GHI/DNI/DHI), proxies de nebulosidade (nuvens, aerossóis, \textit{clear\_sky}) e variáveis meteorológicas (temperatura, umidade, vento) tende a melhorar robustez; o uso de reanálises/satélite (ERA5, CAMS etc.) amplia cobertura temporal e espacial quando redes de piranômetros são esparsas.
+\end{enumerate}
+
+Assim, há \textbf{espaço claro} para contribuir com um estudo focado em \textbf{previsão a cada 15 minutos}, comparando \textbf{LSTM}, \textbf{CNN}, \textbf{XGBoost} e \textbf{ARIMA}, com \textbf{persistência} como linha de base. A análise deverá empregar métricas padronizadas (RMSE, MSE, R²) e validação temporal, assegurando comparação justa com a literatura.
+
+Por fim, com base nas tendências observadas, a subseção seguinte apresenta os trabalhos considerados mais relevantes, selecionados por aplicação, horizonte e métodos, que servirão como referências diretas para o desenho experimental desta dissertação.
+
+\section{Trabalhos mais relevantes da bibliografia para esse estudo}
+
+
+
+Trabalhos iniciais demonstraram o potencial de redes neurais artificiais na previsão de irradiância solar. \citeonline{mellit2010ann}, por exemplo, empregaram uma rede neural MLP (perceptron multicamada) para prever a irradiância global com 24 horas de antecedência em Trieste, Itália, visando estimar o desempenho de uma usina fotovoltaica conectada à rede. O modelo apresentou bom desempenho tanto em dias ensolarados quanto em dias nublados, superando os métodos convencionais da época. Este foi um dos primeiros estudos a aplicar ANN em previsão solar, indicando que mesmo uma arquitetura relativamente simples podia capturar a variabilidade diária da irradiância e fornecer estimativas úteis para o setor fotovoltaico.
+
+Nos anos seguintes, ampliou-se o leque de técnicas de aprendizado de máquina (ML) aplicadas à previsão solar. Uma revisão abrangente de \citeonline{voyant2017review} destaca que diversas abordagens de ML – incluindo redes neurais tradicionais, máquinas de vetores de suporte (SVR), árvores de regressão e ensembles como random forests e boosting – foram utilizadas para prever a irradiância em diferentes contextos. Entretanto, devido à diversidade de conjuntos de dados, horizontes de previsão e métricas empregadas em cada estudo, torna-se difícil comparar diretamente o desempenho dos métodos. Em geral, muitos modelos apresentam erros de previsão equivalentes entre si, e a escolha do melhor depende das condições de cada caso. A revisão conclui que estratégias híbridas ou combinações (ensemble) tendem a melhorar a precisão preditiva, explorando os pontos fortes de cada técnica. Esse panorama abriu caminho para o uso de arquiteturas mais sofisticadas, à medida que dados mais volumosos e computação mais poderosa se tornaram disponíveis.
+
+Nos últimos anos, redes neurais recorrentes e especialmente a arquitetura Long Short-Term Memory (LSTM) ganharam destaque por sua capacidade de modelar dependências temporais de forma eficaz. \citeonline{qing2018lstm} propuseram um modelo LSTM para previsão horária dia-a-dia (day-ahead) que utiliza dados de previsão meteorológica como entradas (temperatura, umidade, velocidade do vento, etc.). Nesse esquema, o problema é tratado como uma predição de múltiplas saídas estruturadas (as 24 horas do dia seguinte em um único pacote) para capturar as correlações entre horas consecutivas. Em testes realizados com dados reais da ilha de Santiago (Cabo Verde), o LSTM apresentou desempenho superior a modelos de referência como persistência, regressão linear e uma rede neural tradicional de múltiplas camadas. Especificamente, o algoritmo proposto mostrou-se 18,3\% mais preciso que um MLP (backpropagation) em termos de RMSE, treinando com ~2 anos de dados para prever 6 meses de valores futuros. Além disso, exibiu menor tendência ao sobreajuste e melhor capacidade de generalização: quando ampliado para usar 10 anos de histórico para prever 1 ano, o erro RMSE do LSTM foi 42,9\% menor que o de uma rede feedforward equivalente. Esses resultados evidenciam as vantagens da LSTM em capturar padrões não lineares e dinâmicos da irradiância diária, sobretudo quando há disponibilidade de variáveis meteorológicas de entrada, algo que aprimora significativamente a qualidade da previsão em comparação a redes neurais estáticas ou modelos puramente estatísticos.
+
+Pesquisas mais recentes têm combinado LSTM com técnicas de pré-processamento de dados e otimização de hiperparâmetros para aprimorar ainda mais a acurácia. \citeonline{mohanasundaram2025rstl} introduziram um modelo que integra uma decomposição de tendência e sazonalidade (Robust Seasonal-Trend Decomposition, RSTL) aos dados de irradiância e variáveis meteorológicas, acoplado a um algoritmo bioinspirado de otimização (Adaptive Seagull Optimization, ASOA) para ajustar automaticamente os pesos e parâmetros de uma LSTM. A ideia é extrair componentes estáveis (tendência, sazonal) do sinal de irradiância antes da previsão e usar o ASOA para encontrar configurações ótimas da rede, inspirando-se no comportamento de busca de alimentos de gaivotas na natureza. Avaliado em conjuntos de dados históricos com fatores meteorológicos essenciais, o método proposto apresentou melhorias significativas nas métricas de erro (reduções em RMSE e MAE) e aumento no coeficiente de determinação ($R^2$) em relação a métodos convencionais. Isso indica que as previsões tornaram-se mais precisas e confiáveis ao empregar essa estratégia híbrida. A decomposição robusta tornou o modelo menos suscetível à variabilidade sazonal, enquanto a otimização adaptativa mitigou o overfitting e refinou o desempenho da LSTM de forma eficiente. Em síntese, o estudo demonstrou que a combinação de técnicas de pré-processing e meta-heurísticas pode potencializar a capacidade preditiva de redes LSTM, reduzindo erros e garantindo maior robustez, especialmente para previsão de energia fotovoltaica sob condições climáticas desafiadoras.
+
+De modo análogo, \citeonline{gyeltshen2025rnn} desenvolveram um modelo híbrido que integra métodos estatísticos tradicionais e aprendizagem profunda para previsão de irradiância em terreno montanhoso (caso de estudo no Butão). Os autores combinaram um modelo ARIMA (para capturar padrões lineares de tendência) com uma rede LSTM (para padrões não lineares), adicionando ainda um mecanismo de atenção (\textit{attention mechanism}) para identificar automaticamente as sequências de entrada mais relevantes na predição. Além disso, diferentes fontes de dados de irradiância foram avaliadas: medições de superfície, estimativas de satélite e reanálises, compondo um repositório diversificado. Entre essas, o dataset NASA POWER destacou-se como o mais confiável para a região, servindo como base para o treinamento. O modelo híbrido ARIMA-LSTM-Atenção foi validado por validação cruzada e comparado isoladamente com o ARIMA e com redes neurais recorrentes puras. Os resultados evidenciaram desempenho superior do modelo híbrido na maioria das estações de medição analisadas, com erros extremamente baixos: os valores de RMSE variaram de 5 a 8,45 W/m² e o MAE de 3,7 a 7,1 W/m², enquanto o MAPE manteve-se em apenas 2–4,5\%. Tais erros são substancialmente menores que os obtidos pelos modelos não-híbridos, indicando maior precisão na previsão da irradiância. O uso do mecanismo de atenção contribuiu para identificar e dar peso às entradas mais informativas, melhorando a capacidade preditiva em meio a muita variabilidade. Adicionalmente, técnicas de regularização (L1/L2) e otimização Bayesiana de hiperparâmetros foram empregadas para calibrar o modelo em cada localidade, evitando sobreajuste e adaptando o modelo às características específicas de cada estação. Esse trabalho demonstra que a sinergia entre componentes lineares e não lineares, aliada ao uso de dados de alta qualidade e ajustes finos, pode elevar significativamente a acurácia em cenários de previsão desafiadores – como regiões de topografia complexa onde a irradiância apresenta alta variabilidade espacial e temporal.
+
+
+No que tange às fontes de dados disponíveis para alimentar os modelos, a literatura evidencia que a qualidade e disponibilidade desses dados impactam diretamente o desempenho preditivo. Além de medições locais de irradiância e imagens do céu, muitos trabalhos recentes exploram dados de modelos de reanálise climática ou de previsão numérica do tempo (NWP) para aprimorar as entradas dos modelos de ML. Por exemplo, \citeonline{urraca2018era5} avaliaram criticamente as estimativas de irradiância de duas reanálises de última geração – o ERA5 (global, do ECMWF) e o COSMO-REA6 (regional, do DWD para a Europa) – comparando-as com dados observados em solo (estações BSRN) e com produtos baseados em satélite. Os autores constataram que o ERA5 representou um grande avanço em relação às reanálises predecessoras: exibiu viés médio positivo de apenas ~+4 W/m² globalmente, reduzindo em 50–75 \% o viés médio que era observado no ERA-Interim e MERRA-2. Em termos de viés, isso torna o ERA5 comparável aos dados de satélite em muitas localidades do interior (longe de oceanos). Todavia, verificou-se que a representação de nuvens nessas reanálises ainda apresenta limitações: o ERA5 tende a superestimar a irradiância em condições nubladas e a subestimar sob céu claro, indicando dificuldades na modelagem precisa da cobertura de nuvens. Consequentemente, embora seu viés médio seja baixo, o erro absoluto do ERA5 sob céu encoberto é maior do que o de métodos baseados em satélite, que capturam melhor a variabilidade instantânea da nebulosidade. Além disso, a resolução espacial relativamente grosseira do ERA5 (~31 km) mostrou-se insuficiente para regiões com variabilidade de irradiância muito alta em curtas distâncias, como áreas costeiras e montanhosas; nesses casos, o COSMO-REA6 (grade de ~6 km) apresentou desempenho superior, por conseguir resolver melhor os gradientes locais e efeitos orográficos. Em síntese, \citeonline{urraca2018era5} concluíram que ERA5 e COSMO-REA6 reduziram a lacuna de qualidade entre reanálises e dados de satélite, tornando-se alternativas viáveis quando dados satelitais ou medições locais são indisponíveis (por exemplo, em regiões polares ou períodos de falha de satélite). No entanto, ressaltam que a previsão de nuvens ainda requer melhorias nesses modelos, e que a grade espacial do ERA5 pode ser inadequada para certos propósitos, recomendando o uso de dados de satélite sempre que possível como referência principal. Para a comunidade de previsão solar, esses achados sugerem que dados de reanálise (ou previsões NWP derivadas deles) podem servir como entradas úteis para modelos de ML ou mesmo como previsores diretos em horizontes maiores, desde que se tenha em mente seus vieses e incertezas. Combinar previsões LSTM com correções baseadas em reanálise, por exemplo, pode unir a adaptabilidade do ML com a abrangência física dos modelos numéricos.
+
+Um desafio relacionado é a falta de dados históricos locais em sítios onde se deseja prever a irradiância ou a geração fotovoltaica. Nesses casos, pesquisadores têm buscado métodos para transferir conhecimento de locais monitorados para locais não monitorados. \citeonline{zambrano2020transfer} abordaram esse problema formulando uma metodologia de aprendizado por similaridade de localidades. Em vez de assumir que há medições suficientes no local de interesse, eles propõem construir um espaço de características multidimensional usando variáveis exógenas correlacionadas à irradiância (por exemplo, coordenadas geográficas, clima médio, altitude, etc.) e definir uma métrica de distância nesse espaço para comparar sítios. Cada local é representado como um ponto no espaço de características, e para um novo local sem dados, encontram-se os sites mais similares segundo essa métrica aprendida. Em seguida, utiliza-se as séries de irradiância desses sites vizinhos para treinar um modelo que seja aplicado no local-alvo, dispensando medidas locais. Experimentos com dados reais mostraram que selecionar sítios semelhantes como fonte de dados de treinamento produziu previsões mais acuradas do que treinar modelos com dados de todos os sites disponíveis indiscriminadamente. Ou seja, houve ganho em personalização da previsão ao usar apenas dados de contextos parecidos com o do local de interesse, evitando contaminação por padrões muito distintos. Essa abordagem se alinha com técnicas de transfer learning e demonstra que, com critério de seleção adequado, é possível construir modelos preditivos para locais sem histórico, algo especialmente útil para projetar usinas fotovoltaicas em regiões remotas. Em comparação com o uso direto de uma LSTM tradicional, que normalmente exigiria um volume considerável de dados de treino do próprio local para alcançar boa performance, o método de \citeonline{zambrano2020transfer} destaca a importância de incorporar informações de similaridade climatológica/geográfica no pipeline de previsão. Assim, modelos baseados em LSTM também podem se beneficiar dessa estratégia – por exemplo, pré-treinando a LSTM em dados de locais análogos e refinando-a para o novo sítio –, combinando a capacidade de generalização do deep learning com a esperteza na seleção de dados de treino pertinentes.
+
+Também merece menção o uso de ferramentas abertas e modelos físicos como base para previsões de irradiância, complementando os métodos puramente data-driven. \citeonline{yan2023pvlib} demonstram uma abordagem em que se emprega a biblioteca open-source pvlib (Python) para estimar componentes de irradiância e realizar previsões, evidenciando o papel de modelos físicos de céu claro integrados em plataformas de fácil acesso. Em seu estudo, utilizaram o modelo de céu claro de Ineichen implementado no pvlib para calcular irradiância de plano inclinado (POA GHI, DNI e DHI) em três locais da rede BSRN, sob diferentes condições de nebulosidade. Os resultados indicaram que o modelo fornece previsões bastante precisas em condições de céu claro, com erros aumentando conforme cresce a fração de nuvens. Em média, observaram que o erro relativo permaneceu baixo enquanto a cobertura de nuvens estivesse abaixo de ~5\%; já com nebulosidade mais densa, o erro se eleva substancialmente. Essa sensibilidade reflete a limitação esperada de modelos puramente físicos diante de variabilidade de nuvens, já que o modelo de Ineichen não incorpora dados de nuvens em tempo real, usando apenas parâmetros como turbidez. Ainda assim, o trabalho ressalta a importância da disponibilidade de ferramentas open-source: com pvlib, usuários podem escolher modelos e algoritmos adequados às suas necessidades e combinar modelos de cálculo diversos para obter resultados personalizados. Isso viabiliza, por exemplo, a integração de previsões meteorológicas (para turbidez, cobertura de nuvens prevista) com modelos de irradiância física e, em seguida, inclusão desses resultados em modelos de previsão de potência fotovoltaica. Em termos comparativos, essa abordagem oferece transparência e rapidez de implementação, aproveitando conhecimentos físicos consolidados. No entanto, carece da adaptabilidade dos métodos de aprendizado de máquina para ajustar-se a padrões complexos ou eventos inesperados. Assim, uma tendência atual é utilizar tais ferramentas em conjunto com ML – por exemplo, gerando uma previsão física inicial (baseline) e então aplicando correções via modelos estatísticos ou de machine learning, melhorando a precisão geral da previsão.
+
+Em resumo, a literatura revela uma evolução significativa das técnicas de previsão de irradiância solar, indo de modelos estatísticos e redes neurais simples até arquiteturas profundas e sistemas híbridos complexos. Os modelos de LSTM emergem como uma das ferramentas mais eficazes, graças à sua habilidade de capturar dependências temporais de curto e longo prazo nas sequências de irradiância. Estudos comparativos mostraram que a LSTM geralmente supera redes neurais feedforward tradicionais em precisão, reduzindo substancialmente métricas de erro quando treinada com dados históricos suficientes. No contexto de previsões com passo de 15 minutos (horizonte intra diário típico), as LSTMs têm demonstrado excelente capacidade de modelar a variabilidade rápida da irradiância e antecipar flutuações dentro do dia. Em contrapartida, modelos mais simples como regressões ou MLPs, embora mais fáceis de implementar e menos exigentes computacionalmente, costumam apresentar erros maiores por não incorporarem essa dinâmica temporal de forma explícita. As abordagens híbridas recentes – que mesclam LSTM com decomposição de séries, otimizações meta-heurísticas, modelos estatísticos ou inputs adicionais representam o estado da arte em termos de redução de erro, pois atacam o problema de múltiplos ângulos. A vantagem é um ganho notável de precisão e robustez, como evidenciado pelos baixíssimos erros obtidos por modelos híbridos em diversos trabalhos. A limitação, por sua vez, é o aumento da complexidade: tais modelos podem se tornar mais difíceis de reproduzir, demandar maior poder computacional e cuidado na configuração de múltiplos componentes. Em resumo, a escolha do modelo ideal envolve considerar um equilíbrio entre desempenho e viabilidade. No caso da presente dissertação evidencia-se pelas pesquisas levantadas que a LSTM isoladamente já fornece uma base sólida, dada sua capacidade de aprender padrões temporais intra diários complexos. Vantagens como a flexibilidade de incorporar diversas variáveis de entrada (incluindo previsões meteorológicas) e a experiência positiva em diferentes estudos reforçam seu uso. Limitações potenciais, entretanto, devem ser reconhecidas: LSTMs podem exigir bastante dados para treinamento e ajustes finos de hiperparâmetros para atingir o desempenho ótimo, e seu treinamento é mais demorado em comparação a modelos rasos. Assim, soluções complementares encontradas na literatura – como enriquecer o modelo LSTM com informações adicionais ( resultados de modelos físicos ou NWP) ou adotar esquemas híbridos – podem ser incorporadas ou pelo menos consideradas como extensões para elevar ainda mais a qualidade das previsões quando necessário. Em suma, os trabalhos mais relevantes da literatura delineiam um caminho claro de aprimoramento na previsão solar: do uso pioneiro de redes neurais simples até as sofisticadas arquiteturas atuais, observa-se uma melhoria contínua na acurácia e na utilidade prática das previsões, guiada tanto pela evolução dos modelos de aprendizado quanto pela integração de novas fontes de dados e conhecimento ao processo preditivo.

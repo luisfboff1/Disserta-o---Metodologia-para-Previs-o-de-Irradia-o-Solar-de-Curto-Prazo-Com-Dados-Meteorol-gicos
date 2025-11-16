@@ -1,0 +1,125 @@
+\section{Modelagem}
+
+Essa seção descreverá a preparação dos dados e a infraestrutura de rastreamento experimental que serão adotadas para os modelos de previsão de irradiância. Em cada etapa, explicitar-se-á \textit{por que} será realizada, \textit{como} será implementada (bibliotecas, estruturas e equações) e \textit{o que se espera} como impacto metodológico. 
+
+\subsection{Preparação dos Dados para Modelagem}
+
+A preparação será implementada com \texttt{pandas} e \texttt{numpy} (manipulação temporal/tabular), \texttt{scikit-learn} (escalonamento), e utilidades de janelamento como \texttt{tricks.sliding}. O objetivo será transformar a série multivariada em um conjunto supervisionado de pares entrada--saída, controlando sazonalidade, escala e vazamento de informação.
+
+\subsection{Definição de variáveis e alvo}
+A cada instante $t$ será considerado um vetor de preditores $\mathbf{x}_t \in \mathbb{R}^{p}$ e uma variável-alvo $y_t \in \mathbb{R}$ (irradiância). Em notação matricial, o painel multivariado será dado por $\mathbf{X} = [\mathbf{x}_1,\dots,\mathbf{x}_T]^\top \in \mathbb{R}^{T \times p}$ e o alvo por $\mathbf{y} = [y_1,\dots,y_T]^\top \in \mathbb{R}^{T \times 1}$. A separação explícita formalizará a construção posterior de janelas.
+
+\subsection{Seleção temporal e consistência}
+Para reduzir vieses por anos incompletos e lacunas sazonais, a série será filtrada conforme a Equação (\ref{eq:filtro_anos}).
+\begin{equation}
+\mathcal{T}^{\ast} = \{\, t \in \mathcal{T} \;|\; \mathrm{year}(t) \notin \mathcal{A}_{\mathrm{rem}} \,\}
+\label{eq:filtro_anos}
+\end{equation}
+
+\noindent
+Em que $\mathcal{T}$ será o conjunto temporal original; $\mathcal{A}_{\mathrm{rem}}$ será o conjunto de anos removidos por incompletude; e $\mathcal{T}^{\ast}$ será o conjunto temporal resultante.
+
+Espera-se melhorar a robustez dos estimadores, preservando a sazonalidade intrínseca.
+
+\subsection{Particionamento temporal }
+Será adotado corte cronológico puro (treino/validação/teste) para evitar vazamento do futuro para o passado, conforme a Equação (\ref{eq:split_temporal}).
+\begin{equation}
+\mathcal{D}_{\mathrm{train}} = \{\, t \leq \tau_1 \,\}, \quad 
+\mathcal{D}_{\mathrm{val}}   = \{\, \tau_1 < t \leq \tau_2 \,\}, \quad
+\mathcal{D}_{\mathrm{test}}  = \{\, t > \tau_2 \,\}
+\label{eq:split_temporal}
+\end{equation}
+
+\noindent
+Em que $\tau_1$ e $\tau_2$ serão marcos temporais (datas) do particionamento; e $\mathcal{D}_{\mathrm{train}}, \mathcal{D}_{\mathrm{val}}, \mathcal{D}_{\mathrm{test}}$ serão subconjuntos temporais disjuntos.
+
+Espera-se avaliação realista de generalização fora da amostra.
+
+\subsection{Escalonamento e inversão de escala}
+
+Para redes neurais e modelos baseados em distância, será aplicado exclusivamente o escalonamento do tipo \textit{min--max}, ajustado no conjunto de treino $\mathcal{D}_{\mathrm{train}}$ e posteriormente aplicado aos conjuntos de validação e teste. Esse procedimento evitará o vazamento de informação do futuro para o passado e garantirá consistência estatística. A transformação e a inversão para o alvo serão implementadas conforme as Equações (\ref{eq:minmax}) e (\ref{eq:invert_scale}).
+
+\begin{equation}
+x' = \frac{x - \min\limits_{\mathcal{D}_{\mathrm{train}}}(x)}{\max\limits_{\mathcal{D}_{\mathrm{train}}}(x) - \min\limits_{\mathcal{D}_{\mathrm{train}}}(x)}
+\label{eq:minmax}
+\end{equation}
+
+\begin{equation}
+\hat{y} = \hat{y}' \cdot \left(\max\limits_{\mathcal{D}_{\mathrm{train}}}(y) - \min\limits_{\mathcal{D}_{\mathrm{train}}}(y)\right) + \min\limits_{\mathcal{D}_{\mathrm{train}}}(y)
+\label{eq:invert_scale}
+\end{equation}
+
+\noindent
+Em que $x$ será o valor original da variável e $x'$ sua versão escalonada; $\min\limits_{\mathcal{D}_{\mathrm{train}}}(x)$ e $\max\limits_{\mathcal{D}_{\mathrm{train}}}(x)$ serão, respectivamente, o valor mínimo e máximo da variável no conjunto de treino; $\hat{y}'$ será a previsão no domínio escalonado; e $\hat{y}$ será a previsão revertida para o domínio físico da irradiância.
+
+Esse procedimento será aplicado a todas as variáveis presentes nos conjuntos de treino, validação e teste, assegurando comparabilidade entre escalas distintas e estabilidade numérica no processo de treinamento.
+
+Para a organização dos dados em lotes durante o treinamento dos modelos sequenciais (como a LSTM), será empregado o \texttt{DataLoader} da biblioteca \texttt{PyTorch}, o qual receberá como entrada tensores normalizados e produzirá lotes no formato $\{ \text{features}, \text{input}, \text{output} \}$, conforme definido no processo de janelação. Isso garantirá eficiência computacional e consistência na passagem dos dados durante o ciclo de treinamento, validação e teste.
+
+\subsection{Janelação supervisionada}
+A série multivariada será transformada em amostras supervisionadas definindo-se \textbf{janela de entrada} (comprimento $L$), \textbf{janela de saída} (horizonte $H$) e \textbf{passo} (\textit{stride} $s$). Cada amostra $n$ será construída conforme a Equação (\ref{eq:janela_superv}):
+\begin{equation}
+\mathbf{X}^{(n)} = \big[\, \mathbf{x}_{t-L+1}, \dots, \mathbf{x}_{t} \,\big] \in \mathbb{R}^{L \times p}, 
+\quad 
+\mathbf{y}^{(n)} = \big[\, y_{t+1}, \dots, y_{t+H} \,\big] \in \mathbb{R}^{H}
+\label{eq:janela_superv}
+\end{equation}
+
+\noindent
+Em que $\mathbf{x}_t \in \mathbb{R}^{p}$ conterá variáveis meteorológicas, sazonais (seno/cosseno) e resíduos/decomposições quando aplicável; $\mathbf{X}^{(n)} \in \mathbb{R}^{L \times p}$ agregará $L$ instantes passados; e $\mathbf{y}^{(n)} \in \mathbb{R}^{H}$ conterá $H$ passos futuros da irradiância.
+
+O índice $t$ avançará pelo tempo com passo $s$ (típico $s=1$), gerando amostras sobrepostas (maior cobertura) ou não (menor correlação entre amostras), de acordo com o desenho experimental. Espera-se que $L$ capture memória suficiente e que $H$ reflita os horizontes de interesse operacional.
+
+\begin{itemize}
+    \item \textbf{Redes recorrentes/convolucionais}: lotes com dimensão $B$ resultarão em tensores $\mathbf{X}\_{\mathrm{batch}} \in \mathbb{R}^{B \times L \times p}$ (LSTM/Attention) ou $\mathbb{R}^{B \times p \times L}$ (CNN-1D). Saídas multi-etapas produzirão $\hat{\mathbf{y}} \in \mathbb{R}^{B \times H}$.
+    \item \textbf{XGBoost/árvores}: a janela será \textit{vetorizada} em $\mathbf{u}^{(n)} \in \mathbb{R}^{L \cdot p}$ ou expandida em estatísticas (médias, mínimos, máximos, últimas $k$ observações). O treinamento poderá ser \textit{multi-output} direto (um modelo para $H$ saídas) ou \textit{direct per horizon} (um modelo por $h\in\{1,\dots,H\}$).
+\end{itemize}
+
+\subsection{Estratégia multi-etapas}
+Será adotado o \textbf{regime multi-saída direta}, no qual um único mapeamento aprenderá simultaneamente todos os horizontes $\{1,\dots,H\}$, reduzindo a acumulação de erro recursivo. A função de perda agregará os erros por horizonte, conforme a Equação (\ref{eq:loss_multioutput}):
+\begin{equation}
+\mathcal{L} = \frac{1}{B\,H} \sum_{b=1}^{B} \sum_{h=1}^{H} \big(\hat{y}_{b,h} - y_{b,h}\big)^2
+\label{eq:loss_multioutput}
+\end{equation}
+
+\noindent
+Em que $B$ será o tamanho do lote; $H$ será o horizonte de previsão; e $\hat{y}_{b,h}$ e $y_{b,h}$ serão, respectivamente, previsão e valor verdadeiro no passo $h$ do lote $b$.
+
+Espera-se melhor consistência entre horizontes e treinamento mais estável para $H$ moderado.
+
+\subsection{Reconstrução temporal das previsões}
+As saídas $\hat{\mathbf{y}}^{(n)}$ serão reindexadas nas datas futuras correspondentes $\{t+1,\dots,t+H\}$ e reinseridas no \textit{dataframe} original, preservando granularidade e calendário. Esse espalhamento permitirá inspeção visual contínua e cálculo de métricas por horizonte.
+
+\subsection{Infraestrutura de Rastreamento Experimental (MLflow)}
+
+Será adotado o \texttt{MLflow} para rastrear parâmetros, métricas, artefatos e versões de modelos (e.g., LSTM, ARIMA--LSTM, Attention, RSTL, XGBoost). A motivação será garantir reprodutibilidade, auditoria e comparabilidade sistemática.
+
+A instrumentação incluirá:
+\begin{itemize}
+    \item definição de experimento e de execuções com \texttt{mlflow.set\_experiment} e \texttt{mlflow.start\_run};
+    \item \textit{autolog} quando aplicável;
+    \item \textbf{parâmetros logados}: $L$ (input window), $H$ (output window), $s$ (stride), conjunto de \textit{features}, escalonadores, arquiteturas, camadas, neurônios, \textit{dropout}, função de ativação, taxa de aprendizado, épocas, lote $B$, hiperparâmetros de árvores (estimadores, profundidade, taxa de aprendizado do \textit{boosting});
+    \item \textbf{artefatos}: curvas treino/validação, diagnósticos por horizonte, gráficos real vs. previsto, amostras de janelas, \textit{checkpoints} de modelo e serialização do pré-processamento;
+    \item \textbf{assinatura} do modelo (\textit{input schema}/\textit{output schema}) e exemplo canônico de entrada para servir/inferência.
+\end{itemize}
+\subsection{Avaliação de erros nas previsões}
+
+Serão registradas as métricas \textbf{RMSE} e \textbf{$R^2$}, tanto em valores globais quanto desagregadas por horizonte. As definições constarão nas Equações (\ref{eq:rmse}) e (\ref{eq:r2}); as variantes por horizonte considerarão o subconjunto $\{(b,h)\,|\,h=\bar{h}\}$.
+
+\begin{equation}
+\mathrm{RMSE} = \sqrt{\frac{1}{N}\sum_{i=1}^{N}\big(\hat{y}_i - y_i\big)^2}
+\label{eq:rmse}
+\end{equation}
+
+\begin{equation}
+R^2 = 1 - \frac{\sum_{i=1}^{N} \big(y_i - \hat{y}_i\big)^2}{\sum_{i=1}^{N} \big(y_i - \overline{y}\big)^2}
+\label{eq:r2}
+\end{equation}
+
+\noindent
+Em que $N$ será o número de previsões agregadas (global ou por horizonte); $y_i$ e $\hat{y}_i$ serão, respectivamente, observação e previsão no instante $i$; e $\overline{y}$ será a média das observações no período considerado.
+
+Essas métricas permitirão quantificar a precisão das previsões (RMSE) e a proporção da variabilidade explicada pelo modelo ($R^2$), garantindo rastreabilidade de desempenho por horizonte e comparações fiéis entre diferentes arquiteturas e configurações.
+
+\subsection{Boas práticas de reprodutibilidade}
+Serão adotados \textit{seeds} determinísticos (\texttt{numpy}, e \texttt{PyTorch} quando aplicável), registro de versões de bibliotecas e armazenamento do caminho/versão do conjunto de dados como artefato. Serão utilizados \textbf{tags} descritivos (dataset, $L$, $H$, \textit{features}, escalonador, arquitetura) para facilitar a consulta. Espera-se possibilitar a repetição exata das execuções e auditoria metodológica.

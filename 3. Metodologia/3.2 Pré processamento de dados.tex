@@ -1,0 +1,151 @@
+\section{Pré-processamento e Engenharia de Dados}
+
+Após a seleção da base de dados, será realizado o pré-processamento das séries temporais de irradiância e variáveis meteorológicas. Esta etapa é fundamental para garantir a consistência e a confiabilidade do conjunto de dados a ser utilizado na modelagem, além de possibilitar a extração de informações adicionais relevantes por meio da engenharia de atributos. O processo será conduzido em múltiplas fases, descritas a seguir.
+
+\subsection{Análise de completude e qualidade dos dados}
+
+Inicialmente, será realizada a verificação da \textit{completude temporal} da base, avaliando-se o número de minutos observados em cada ano em comparação ao esperado para uma série contínua. Essa análise permitirá identificar anos com lacunas significativas e quantificar a proporção de registros efetivamente disponíveis. A inspeção da completude temporal é relevante, pois séries com baixa cobertura histórica tendem a prejudicar a capacidade de generalização dos modelos preditivos.
+
+\subsection{Energia diária e definição do intervalo de análise}
+
+Para definir a faixa horária mais adequada ao estudo, será calculada a energia diária total de irradiância incidente. A energia em um dia $d$ será obtida pela integração da irradiância ao longo do tempo, conforme a Equação (\ref{eq:energia_diaria}).
+
+\begin{equation}
+E_d = \int_{t \in d} SWD(t)\, dt \approx \sum_{i=1}^{N_d} SWD(t_i) \cdot \Delta t
+\label{eq:energia_diaria}
+\end{equation}
+\noindent
+Em que $E_d$ representa a energia diária total incidente em um dia $d$ (Wh/m$^2$); $SWD(t_i)$ é a irradiância global no instante $t_i$ (W/m$^2$); $\Delta t$ corresponderá ao passo temporal de integração (1 minuto); e $N_d$ será o número de amostras disponíveis no dia.
+
+Antes do cálculo da energia, será verificado o fuso horário dos dados. Em diversas bases meteorológicas e radiométricas, os registros são fornecidos em tempo universal coordenado (UTC). Para que os valores façam sentido físico em relação ao nascer e ao pôr do sol locais, será necessário realizar a conversão para o fuso horário da estação de medição, no caso UTC$-3$. Esse ajuste assegurará que a distribuição horária da irradiância corresponda à realidade, permitindo que o modelo represente adequadamente os padrões locais.
+
+A análise dos perfis de energia ao longo das 24 horas indicará o período em que existe energia efetivamente relevante para alimentar os modelos. Assim, será adotado esse intervalo como janela de observação, reduzindo-se a quantidade de valores nulos (noturnos) e concentrando a modelagem nos períodos mais significativos para aplicações fotovoltaicas.
+
+\subsection{Tratamento de valores faltantes e lacunas temporais}
+
+Após o recorte temporal, serão verificadas lacunas de diferentes magnitudes. O tratamento será realizado de forma seletiva:
+
+\begin{itemize}
+    \item \textbf{Lacunas curtas} (até 30 minutos): serão preenchidas por interpolação utilizando a função \texttt{interpolate} da biblioteca \texttt{pandas}. No caso do método linear com índice temporal, os valores intermediários serão calculados pela Equação (\ref{eq:interp_linear}), assumindo variação linear entre os pontos vizinhos.
+
+    \begin{equation}
+        y(t) = y(t_a) + \frac{y(t_b) - y(t_a)}{t_b - t_a} \cdot (t - t_a)
+        \label{eq:interp_linear}
+    \end{equation}
+
+    Em que $y(t)$ será o valor interpolado para um instante intermediário $t$; $t_a$ representará o instante anterior válido à lacuna; e $t_b$ representará o instante posterior válido à lacuna.
+
+    \item \textbf{Lacunas longas} (superiores a 30 minutos): dias contendo tais falhas serão descartados, de forma a não comprometer a consistência da série.
+\end{itemize}
+
+\subsection{Correção de valores espúrios}
+
+Serão identificados valores fisicamente inválidos ou inconsistentes nas medições, tais como: irradiância solar negativa ($SWD < 0$), removida por não ter significado físico; umidade relativa fora do intervalo $[0, 100]\,\%$, corrigida por truncamento nos limites; e pressão atmosférica ou temperatura fora de faixas climatológicas plausíveis para a região (850–1100 hPa e $[-10, 50]^{\circ}C$, respectivamente), que serão descartadas ou substituídas por interpolação. Adicionalmente, valores iguais a zero durante o período diurno (07:00–20:00) serão tratados como falhas instrumentais e corrigidos por interpolação quando isolados.
+
+\subsection{Reamostragem temporal}
+
+Visando reduzir a variabilidade de alta frequência e alinhar a resolução da previsão com aplicações energéticas, as séries serão reamostradas para intervalos de 15 minutos. O valor médio da irradiância em cada janela será descrito pela Equação (\ref{eq:reamostragem}).
+
+\begin{equation}
+SWD^{15}(t) = \frac{1}{N}\sum_{i=1}^{N} SWD(t_i)
+\label{eq:reamostragem}
+\end{equation}
+
+Em que $SWD^{15}(t)$ será a irradiância média reamostrada a cada 15 minutos; $SWD(t_i)$ corresponderão aos valores originais de irradiância na janela; e $N$ será o número de observações originais dentro da janela de 15 minutos.
+
+\subsection{Variáveis derivadas a partir de modelos físicos}
+
+Será utilizado o modelo de céu claro de \textit{Ineichen}, implementado na biblioteca \texttt{pvlib}, para estimar a irradiância teórica sem atenuação atmosférica ($SWD_{cs}$). A partir disso, será construído o índice de claridade $k_t^{*}$, conforme a Equação (\ref{eq:ktstar}).
+
+\begin{equation}
+k_t^{*}(t) = \frac{SWD(t)}{SWD_{cs}(t)}
+\label{eq:ktstar}
+\end{equation}
+
+Em que $k_t^{*}(t)$ será o índice de claridade adimensional; $SWD(t)$ corresponderá à irradiância global medida no instante $t$ (W/m$^2$); e $SWD_{cs}(t)$ será a irradiância estimada para céu claro (W/m$^2$).
+
+Os valores serão truncados no intervalo $[0,1]$, de forma a evitar distorções por inconsistências de medição. Este índice fornecerá uma medida da transparência atmosférica, capturando a influência de nuvens e aerossóis.
+
+
+\subsection{Codificação de variáveis sazonais}
+
+A variabilidade intradiária e anual da irradiância será incorporada por meio de uma mesma família de funções sazonais contínuas, evitando descontinuidades típicas de variáveis categóricas e garantindo padronização entre diferentes escalas temporais. A estratégia consistirá em normalizar a variável cíclica para o intervalo $[0,1]$ e, em seguida, aplicar uma função periódica suave com pico controlável por um parâmetro de fase. A forma geral será apresentada na Equação (\ref{eq:sazonal_unificada}).
+
+\begin{equation}
+\text{saz}(t) \;=\; \cos^{2}\!\left(\pi \cdot \Big(\tilde{x}(t) - \varphi\Big)\right),
+\qquad
+\tilde{x}(t) \;=\; \frac{x(t)-x_{\min}}{x_{\max}-x_{\min}}
+\label{eq:sazonal_unificada}
+\end{equation}
+
+\noindent
+Em que $\text{saz}(t)$ representará a codificação sazonal contínua e adimensional no instante $t$; $x(t)$ será a variável cíclica de interesse (hora do dia ou mês do ano); $\tilde{x}(t)$ será a versão normalizada de $x(t)$ para o intervalo $[0,1]$; $x_{\min}$ e $x_{\max}$ delimitarão o ciclo considerado; e $\varphi \in [0,1]$ será o parâmetro de \textit{fase}, que posicionará o máximo da função (pico) ao longo do ciclo.
+
+A escolha de $\cos^{2}(\cdot)$ apresenta três vantagens práticas: (i) domínio naturalmente limitado em $[0,1]$, evitando escalas negativas; (ii) suavidade e derivabilidade, úteis a modelos baseados em gradiente; e (iii) controle explícito da posição do pico por meio de $\varphi$. Note-se que $\sin^{2}(\cdot)$ é equivalente a um deslocamento de fase de $\cos^{2}(\cdot)$; portanto, adotar-se-á uma única forma para padronizar a construção.
+
+Do ponto de vista metodológico, a construção acima evitará descontinuidades entre valores adjacentes (por exemplo, entre mês=12 e mês=1), padronizará a amplitude em $[0,1]$ e permitirá alinhar os picos aos comportamentos físicos de interesse por meio de $\varphi$. Essa padronização também facilitará a interpretação e a comparação entre estudos, uma vez que a mesma forma funcional será aplicada às diferentes escalas temporais consideradas.
+
+\subsection{Engenharia de variáveis adicionais}
+
+Serão introduzidos atributos derivados da própria série de irradiância com o objetivo de fornecer ao modelo informações explícitas sobre a dinâmica temporal, conforme as Equações (\ref{eq:deltas})--(\ref{eq:direcao}).
+
+\begin{align}
+\Delta SWD_{1}(t) &= SWD(t) - SWD(t-1), \nonumber \\
+\Delta SWD_{5}(t) &= SWD(t) - SWD(t-5), \nonumber \\
+\Delta SWD_{10}(t) &= SWD(t) - SWD(t-10)
+\label{eq:deltas}
+\end{align}
+
+\begin{align}
+SWD_{m3}(t) &= \frac{1}{3}\sum_{i=0}^{2} SWD(t-i), \nonumber \\
+SWD_{m9}(t) &= \frac{1}{9}\sum_{i=0}^{8} SWD(t-i), \nonumber \\
+\Delta SWD_{mmed}(t) &= SWD_{m3}(t) - SWD_{m9}(t)
+\label{eq:medias}
+\end{align}
+
+\begin{equation}
+dir_{SWD}(t) = \text{sign}\left(\Delta SWD_{1}(t)\right)
+\label{eq:direcao}
+\end{equation}
+
+\noindent
+Em que $\Delta SWD_{1}(t)$, $\Delta SWD_{5}(t)$ e $\Delta SWD_{10}(t)$ representarão variações de curto prazo em diferentes escalas temporais; $SWD_{m3}(t)$ e $SWD_{m9}(t)$ corresponderão às médias móveis de 3 e 9 passos, respectivamente; $\Delta SWD_{mmed}(t)$ será definido como a diferença entre as duas médias móveis, funcionando como um indicador explícito de tendência; e $dir_{SWD}(t)$ será a variável categórica derivada do sinal de $\Delta SWD_{1}(t)$, assumindo valores $+1$ para tendência de subida, $-1$ para tendência de descida e $0$ para estabilidade.
+
+Em síntese, essas variáveis adicionais serão construídas com o intuito de ampliar a capacidade dos modelos de aprendizado de máquina em capturar comportamentos de curtíssimo prazo (rampas), padrões de oscilação (diferenças em múltiplos horizontes), tendências locais (diferença entre médias) e direção da variação (sinal).
+
+\subsection{Incorporação de resíduo ARIMA}
+
+Adicionalmente, será ajustado um modelo autorregressivo integrado de médias móveis (ARIMA) simples sobre a série de irradiância. O ARIMA é um modelo estatístico clássico para séries temporais, capaz de capturar dependências lineares por meio de três componentes principais: (i) a parte autorregressiva (AR), que modela a série em função de valores passados; (ii) a parte de diferenciação (I), que garantirá a estacionariedade por meio de diferenças sucessivas; e (iii) a parte de médias móveis (MA), que considerará o efeito de choques ou erros de previsão passados. A previsão fornecida pelo ARIMA, denotada por $SWD_{ARIMA}(t)$, corresponderá a uma estimativa linear da irradiância baseada na dinâmica histórica da série.
+
+A partir dessa previsão, será calculado o resíduo, definido na Equação (\ref{eq:arima_residuo}), que representará a parcela da variabilidade não explicada pelo modelo linear.
+
+\begin{equation}
+Res_{ARIMA}(t) = SWD(t) - SWD_{ARIMA}(t)
+\label{eq:arima_residuo}
+\end{equation}
+
+\noindent
+Em que $SWD_{ARIMA}(t)$ será a previsão de irradiância obtida pelo modelo ARIMA; e $Res_{ARIMA}(t)$ será o resíduo, correspondente à diferença entre a série observada e a previsão linear.
+
+A motivação para incorporar tanto a previsão $SWD_{ARIMA}(t)$ quanto o resíduo $Res_{ARIMA}(t)$ como variáveis explicativas está no fato de que o ARIMA tende a capturar bem o comportamento médio e suave da série, mas não reproduz de forma satisfatória variações repentinas, como aquelas provocadas por nuvens de passagem rápida. Nesse contexto, espera-se que o resíduo contenha informação adicional sobre essas flutuações abruptas, fornecendo ao modelo de aprendizado de máquina um sinal explícito de discrepâncias entre o comportamento esperado (linear) e o observado (não linear).
+
+\subsection{Integração de previsores do dia seguinte}
+
+Por fim, será incorporado ao modelo um conjunto de informações meteorológicas que estariam disponíveis em um cenário real de previsão. Para simular essa situação, serão utilizadas as próprias séries de temperatura, umidade relativa e pressão atmosférica, deslocadas em um dia para trás, gerando as variáveis descritas pela Equação (\ref{eq:prev_meteo}).
+
+\begin{equation}
+X_{prev}(t) = X(t+1\,dia), \quad X \in \{\text{Temp}, RH, Pressure\}
+\label{eq:prev_meteo}
+\end{equation}
+
+\noindent
+Em que $X_{prev}(t)$ representará a série deslocada de um dia, utilizada como proxy da previsão meteorológica operacional para o instante $t$; e $X(t)$ corresponderá à variável meteorológica original (temperatura, umidade relativa ou pressão).
+
+A motivação para a inclusão dessas variáveis será fornecer ao modelo uma visão antecipada de possíveis mudanças meteorológicas no dia seguinte. Por exemplo, no meio da tarde poderá ocorrer queda de temperatura, aumento de umidade ou precipitação, fatores que impactarão diretamente a irradiância solar. Atualmente, tais previsões são amplamente disponíveis por modelos numéricos de previsão do tempo (NWP), sendo natural sua utilização em sistemas de previsão solar.
+
+Entretanto, muitas bases históricas de dados radiométricos não fornecem diretamente a previsão meteorológica associada. Nesses casos, poderá ser assumido que a melhor aproximação para a previsão de uma variável no dia seguinte é o próprio valor observado nesse dia, deslocado no tempo. Essa construção garantirá que o modelo seja capaz de acompanhar tendências gerais do dia seguinte, ainda que na prática, em um cenário operacional, exista um erro adicional proveniente da incerteza da previsão.
+
+Com o intuito de simular essa incerteza, também serão construídas versões perturbadas por ruído gaussiano $N(0,\sigma^2)$, resultando nas variáveis $X_{prev\_ruido}$. Essa abordagem representará situações em que a previsão meteorológica não é exata, mas possui margens de erro, como no caso de previsões probabilísticas de chuva (por exemplo, 80\% de chance de precipitação). Assim, será avaliado não apenas o impacto da previsão meteorológica perfeita, mas também a resiliência do modelo diante de previsões imperfeitas.
+
+O resultado desse processo de pré-processamento e engenharia de dados será um conjunto de variáveis originais e derivadas que sintetizarão tanto informações físicas quanto estatísticas da série temporal, ampliando a capacidade potencial dos modelos preditivos em capturar padrões complexos de variação da irradiância solar. Ressalta-se, contudo, que a utilidade efetiva de cada variável auxiliar não será assumida previamente. Todas as variáveis criadas serão analisadas e testadas na etapa de experimentos, de forma a verificar sua relevância prática para a tarefa de previsão. Assim, a seleção final das variáveis a serem utilizadas será fundamentada nos resultados obtidos, considerando tanto o impacto sobre as métricas de desempenho quanto a análise de importância de atributos.
+

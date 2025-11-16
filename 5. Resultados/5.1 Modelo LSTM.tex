@@ -1,0 +1,396 @@
+\section{Resultados com LSTM}
+
+\subsection{LSTM base (sem variáveis adicionais)}
+Inicialmente foi avaliada uma configuração de rede LSTM com hiperparâmetros escolhidos com base na literatura, sem realização de processo de otimização. Foram adotados \textit{input window} de 64 passos (equivalentes a um dia de histórico, dado o intervalo de 15 minutos) e \textit{output window} de 64 passos (previsão para o dia subsequente). Adicionalmente, foi testada a utilização de uma janela de sete dias como histórico, de modo a avaliar o impacto do maior horizonte de entrada no desempenho.
+
+A arquitetura considerou duas camadas, 40 neurônios por camada, função de ativação linear na saída, taxa de dropout de $0{,}2$ e otimizador Adam com taxa de aprendizado de $0{,}001$. O treinamento foi realizado com \textit{batch size} de 512, até 100 épocas, com \textit{early stopping} definido em 10 épocas de paciência.
+
+As variáveis explicativas utilizadas encontram-se listadas a seguir:
+
+\begin{itemize}
+    \item Ano, dia e minuto (indicadores temporais);
+    \item $\mathrm{SWD}$ (irradiância global medida);
+    \item $RH$ (umidade relativa);
+    \item Pressão atmosférica;
+    \item Temperatura do ar;
+    \item $k_t^{*}$ (índice de transmitância atmosférica);
+    \item Hora sazonal (função trigonométrica);
+    \item Mês sazonal (função trigonométrica).
+\end{itemize}
+
+Como requisito para consistência das janelas de entrada e saída, foram considerados apenas os anos com número suficiente de dias completos no banco de dados. A Tabela~\ref{tab:dias_completos} apresenta a contagem de dias completos por ano, sendo escolhidos os períodos de 2009, 2010, 2011, 2012, 2015 e 2016 para compor os experimentos.
+
+\begin{table}[H]
+    \centering
+    \caption{Número de dias completos por ano na base de dados.}
+    % \resizebox{\textwidth}{!}{%
+    \begin{tabular}{|c|c|}
+        \hline
+        \textbf{Ano} & \textbf{Dias completos} \\
+        \hline
+        2009 & 321 \\
+        2010 & 365 \\
+        2011 & 363 \\
+        2012 & 296 \\
+        2015 & 249 \\
+        2016 & 335 \\
+        \hline
+    \end{tabular}
+    % }
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:dias_completos}
+\end{table}
+
+A divisão entre treino, validação e teste foi realizada de forma cronológica, conforme descrito a seguir:
+\begin{itemize}
+    \item \textbf{Treino}: anos de 2009 a 2012;
+    \item \textbf{Validação}: ano de 2015;
+    \item \textbf{Teste}: ano de 2016.
+\end{itemize}
+
+Essa estratégia garante que o modelo seja treinado com uma série de anos consecutivos, avaliado em um ano intermediário e testado em um período posterior, permitindo observar sua capacidade de generalização temporal.
+
+Com essa configuração inicial, o modelo apresentou RMSE de \textbf{159,24 W/m²} e $R^2$ de \textbf{0,7538} no conjunto de teste. Esses valores indicam que, mesmo sem variáveis auxiliares ou ajuste fino de hiperparâmetros, a LSTM foi capaz de capturar parte relevante da variabilidade da irradiância.
+
+Testes adicionais mostraram que o uso de sete dias de histórico no \textit{input window} não trouxe ganhos de desempenho, resultando em RMSE de \textbf{161,00 W/m²} e $R^2$ de \textbf{0,7483}. Esse resultado sugere que a irradiância do dia seguinte depende majoritariamente do comportamento do dia imediatamente anterior, não se beneficiando da inclusão de dias mais distantes no passado. 
+
+Da mesma forma, ao substituir as variáveis sazonais (\textit{hora sazonal} e \textit{mês sazonal}) por suas versões lineares (\textit{hora} e \textit{mês}), o modelo apresentou piora de desempenho, com RMSE de \textbf{161,83 W/m²} e $R^2$ de \textbf{0,7457}. Isso evidencia que a representação sazonal por funções trigonométricas é mais adequada para capturar a periodicidade da irradiância solar.
+
+Dessa forma, para todos os experimentos subsequentes, decidiu-se adotar: (i) \textit{input window} de 64 passos (1 dia) e (ii) variáveis sazonais ao invés de representações lineares. Essa decisão visa reduzir o espaço de busca de configurações e concentrar a análise nas variáveis e ajustes com maior potencial de ganho preditivo.
+
+
+A Tabela~\ref{tab:resultados_lstm} apresenta o resumo dos resultados, que será atualizado nas subseções seguintes à medida que diferentes variantes do modelo forem avaliadas.
+
+\begin{table}[!h]
+    \centering
+    \caption{Resumo inicial de desempenho dos modelos LSTM.}
+    % \resizebox{0.9\textwidth}{!}{%
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Modelo} & \textbf{RMSE (W/m²)} & \textbf{$R^2$} \\
+        \hline
+        LSTM base (sem variáveis adicionais) & 159,24 & 0,7538 \\
+        \hline
+    \end{tabular}
+    % }
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:resultados_lstm}
+\end{table}
+\FloatBarrier
+
+Para avaliação qualitativa, foram selecionados três dias distintos:
+\begin{enumerate}
+    \item Um dia típico, de céu claro, em que o modelo apresenta desempenho satisfatório;
+    \item Um caso de transição \textbf{normal $\rightarrow$ chuvoso}, em que a previsão não acompanha as oscilações abruptas provocadas pela nebulosidade repentina;
+    \item Um caso de transição \textbf{chuvoso $\rightarrow$ normal}, em que o histórico prejudica a previsão do dia subsequente de céu limpo.
+\end{enumerate}
+
+As Figuras~\ref{fig:lstm_base_normal}, \ref{fig:lstm_base_normal_chuvoso} e \ref{fig:lstm_base_chuvoso_normal} ilustram essas situações.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão com LSTM base em dia típico de céu claro (20/01/2016).}
+    \includegraphics[width=0.95\textwidth]{Figuras/LSTM BASICO DIA 20-01-2016.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:lstm_base_normal}
+\end{figure}
+
+No dia típico de céu claro (Figura~\ref{fig:lstm_base_normal}), a rede LSTM conseguiu reproduzir de forma satisfatória a curva de irradiância, acompanhando bem tanto a ascensão matinal quanto o decaimento ao final da tarde. Nesse caso, a regularidade do padrão diário favoreceu o modelo, que aprendeu adequadamente a dinâmica suave da série.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão com LSTM base em caso de transição normal $\rightarrow$ chuvoso (15/05/2016).}
+    \includegraphics[width=0.95\textwidth]{Figuras/LSTM BASICO DIA 15-05-2016.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:lstm_base_normal_chuvoso}
+\end{figure}
+
+Já na transição de um dia normal para um dia chuvoso (Figura~\ref{fig:lstm_base_normal_chuvoso}), a previsão mostrou maior dificuldade. A rede, ao receber como histórico um dia de céu limpo, projetou para o dia seguinte um padrão igualmente regular. Entretanto, a presença de nebulosidade intensa resultou em valores observados muito inferiores, gerando grandes discrepâncias. Este foi o cenário mais problemático para o modelo LSTM básico, pois evidencia sua limitação em antecipar mudanças abruptas nas condições atmosféricas.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão com LSTM base em caso de transição chuvoso $\rightarrow$ normal (19/04/2016).}
+    \includegraphics[width=0.95\textwidth]{Figuras/LSTM BASICO DIA 19-04-2016.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:lstm_base_chuvoso_normal}
+\end{figure}
+
+No caso inverso, de transição de um dia chuvoso para um dia normal (Figura~\ref{fig:lstm_base_chuvoso_normal}), o modelo também apresentou limitações, embora em menor intensidade. O histórico de irradiância baixa levou a previsões subestimadas no dia subsequente de céu limpo. Ainda assim, o desvio não foi tão acentuado quanto no caso anterior, visto que o padrão de crescimento diário foi parcialmente capturado, ainda que com valores deslocados para baixo.
+
+
+
+\subsection{LSTM com resíduo ARIMA}
+
+Nesta variante, foi incorporado exclusivamente o resíduo do ARIMA, $Res_{ARIMA}(t)$, conforme Equação (\ref{eq:arima_residuo}), como variável auxiliar ao conjunto de entradas. Mantiveram-se as demais configurações do modelo: janelas de entrada e saída de 64 passos (1 dia), duas camadas LSTM com 40 unidades, \textit{dropout} de $0{,}2$, \textit{optimizer} Adam ($\eta=0{,}001$) e \textit{early stopping} com paciência de 10 épocas. 
+
+Com a inclusão de $Res_{ARIMA}(t)$, observou-se melhora nas métricas globais, com RMSE de \textbf{157,40 W/m²} e $R^2$ de \textbf{0,7595} no conjunto de teste, em comparação ao modelo base (RMSE 159,24 W/m²; $R^2$ 0,7538). Esse ganho é compatível com a expectativa de que o resíduo concentre variações rápidas não capturadas pela dinâmica suavizada.
+
+A Figura~\ref{fig:lstm_res_arima_normal_chuvoso} ilustra o caso representativo de transição \textbf{normal $\rightarrow$ chuvoso}. Nota-se que a inclusão de $Res_{ARIMA}(t)$ reduz parcialmente o viés em períodos com nebulosidade, atenuando a superestimação típica do modelo base. Ainda assim, permanece dificuldade em antecipar quedas abruptas de irradiância, sobretudo quando a nebulosidade se estabelece de maneira súbita ao longo do dia. Esse comportamento é coerente com a natureza da variável: o resíduo oferece um \textit{sinal de desvio} aprendido a partir do histórico, mas não contém informação exógena prospectiva suficiente para antecipar mudanças de regime atmosférico.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão com LSTM + $Res_{ARIMA}(t)$ em transição normal $\rightarrow$ chuvoso.}
+    \includegraphics[width=0.95\textwidth]{Figuras/LSTM ARIMA DIA 15-05-2016.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:lstm_res_arima_normal_chuvoso}
+\end{figure}
+
+Em síntese, a variável $Res_{ARIMA}(t)$ contribuiu para capturar irregularidades de curta duração, produzindo melhora modesta porém consistente nas métricas globais. Contudo, a ausência de previsores meteorológicos impede o modelo de antecipar eventos subdiários abruptos, o que motiva a avaliação, nas subseções seguintes, do uso de variáveis de previsão meteorológica como entradas adicionais.
+
+A Tabela~\ref{tab:resultados_lstm_atualizada} apresenta a atualização da comparação acumulada entre os modelos LSTM. Nota-se que a inclusão do resíduo ARIMA elevou o desempenho em relação ao modelo base, confirmando a relevância dessa variável derivada. Essa tabela será progressivamente expandida ao longo desta seção, permitindo observar de forma sistemática os ganhos ou perdas decorrentes de cada conjunto de variáveis incorporadas.
+
+
+\begin{table}[H]
+    \centering
+    \caption{Resumo atualizado de desempenho dos modelos LSTM (até esta subseção).}
+    % \resizebox{0.8\textwidth}{!}{%
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Modelo} & \textbf{RMSE (W/m²)} & \textbf{$R^2$} \\
+        \hline
+        LSTM base (sem variáveis adicionais) & 159{,}24 & 0{,}7538 \\
+        LSTM + $Res_{ARIMA}(t)$ & 157{,}40 & 0{,}7595 \\
+        \hline
+    \end{tabular}
+    % }
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:resultados_lstm_atualizada}
+\end{table}
+
+\subsection{LSTM com variáveis de previsão meteorológica}
+
+Na terceira configuração, foram incorporadas variáveis provenientes de previsões meteorológicas (temperatura, umidade relativa e pressão atmosférica) ao conjunto de entradas. O restante da arquitetura foi mantido inalterado em relação aos experimentos anteriores, de forma a isolar o impacto do acréscimo dessas variáveis.
+
+Com essa modificação, observou-se um ganho substancial no desempenho global: o RMSE \textbf{103,10 W/m²}, enquanto o $R^2$ alcançou \textbf{0,8968}. Esses valores representam uma melhora expressiva frente ao modelo base (RMSE 159,24 W/m²; $R^2$ 0,7538) e ao modelo com resíduo ARIMA (RMSE 157,40 W/m²; $R^2$ 0,7595), confirmando a relevância da incorporação de previsores meteorológicos.
+
+A Figura~\ref{fig:lstm_prev_meteo_normal_chuvoso} apresenta o caso de transição \textbf{normal $\rightarrow$ chuvoso}. Nota-se que, embora o modelo ainda encontre dificuldades em antecipar quedas abruptas de irradiância, o padrão geral da curva prevista aproxima-se de maneira muito mais realista do observado, em comparação às variantes anteriores. O uso das variáveis meteorológicas permitiu ao modelo ajustar-se melhor ao regime atmosférico do dia subsequente, capturando de forma mais adequada oscilações decorrentes da nebulosidade.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão com LSTM + variáveis de previsão meteorológica em transição normal $\rightarrow$ chuvoso.}
+    \includegraphics[width=0.95\textwidth]{Figuras/LSTM PREVISAO DIA 15-05-2016.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:lstm_prev_meteo_normal_chuvoso}
+\end{figure}
+
+Esse resultado evidencia que a inclusão de informações exógenas, ainda que sujeitas a incertezas próprias de modelos meteorológicos, é fundamental para a previsão de irradiância. Enquanto os modelos anteriores se apoiavam apenas em padrões históricos e resíduos, o uso de previsores externos fornece ao modelo um contexto físico adicional, reduzindo de maneira significativa o erro médio.
+
+A Tabela~\ref{tab:resultados_lstm_atualizada} apresenta a comparação acumulada entre os modelos até esta etapa. Nota-se que a LSTM com previsores meteorológicos é, até o momento, a configuração de melhor desempenho, superando claramente as abordagens baseadas apenas em informações históricas.
+
+\begin{table}[H]
+    \centering
+    \caption{Resumo atualizado de desempenho dos modelos LSTM (Tabela 10).}
+    % \resizebox{0.85\textwidth}{!}{%
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Modelo} & \textbf{RMSE (W/m²)} & \textbf{$R^2$} \\
+        \hline
+        LSTM base (sem variáveis adicionais) & 159{,}24 & 0{,}7538 \\
+        LSTM + $Res_{ARIMA}(t)$ & 157{,}40 & 0{,}7595 \\
+        LSTM + previsores meteorológicos & 103{,}10 & 0{,}8968 \\
+        \hline
+    \end{tabular}
+    % }
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:resultados_lstm_atualizada}
+\end{table}
+
+\subsection{LSTM com variáveis de previsão meteorológica com ruído}
+
+
+Por fim, avaliou-se o impacto da utilização de variáveis de previsão meteorológica sujeitas a incerteza. Para tal, foi adicionado um ruído aleatório de até $\pm 5\%$ sobre os valores de temperatura, umidade relativa e pressão atmosférica previstos, de modo a simular um cenário mais realista, no qual até mesmo as melhores previsões meteorológicas estão sujeitas a erros.
+
+Com essa configuração, o modelo apresentou RMSE de \textbf{104,21 W/m²} e $R^2$ de \textbf{0,8945}. Embora esses resultados indiquem uma leve piora em relação ao uso das previsões “exatas” (RMSE 103,10 W/m²; $R^2$ 0,8968), o desempenho permanece substancialmente superior ao obtido sem a inclusão de previsores meteorológicos, ou mesmo ao uso apenas do resíduo ARIMA.
+
+A Figura~\ref{fig:lstm_prev_meteo_ruido_normal_chuvoso} apresenta novamente o caso de transição \textbf{normal $\rightarrow$ chuvoso}. Observa-se que, apesar do ruído introduzido nas variáveis meteorológicas, o modelo manteve capacidade de adaptação ao regime do dia seguinte, ainda que com menor precisão. O padrão geral da curva prevista segue mais próximo da série real em comparação com as versões sem previsores, evidenciando a resiliência do modelo à presença de incertezas moderadas.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Previsão com LSTM + variáveis de previsão meteorológica com ruído em transição normal $\rightarrow$ chuvoso.}
+    \includegraphics[width=0.95\textwidth]{Figuras/LSTM PREVISAO RESIDUO DIA 15-05-2016.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:lstm_prev_meteo_ruido_normal_chuvoso}
+\end{figure}
+
+Esse resultado demonstra que, embora a disponibilidade de previsões exatas represente um limite superior de desempenho, o modelo LSTM se beneficia de forma robusta mesmo em condições mais próximas da prática operacional. A introdução de ruído reduziu marginalmente as métricas, mas o ganho em relação às variantes sem previsores continua expressivo, reforçando a importância da utilização dessas variáveis.
+
+A Tabela~\ref{tab:resultados_lstm_atualizada} apresenta o resumo comparativo atualizado, evidenciando a superioridade das configurações com previsores meteorológicos, mesmo sob a presença de incertezas.
+
+\begin{table}[!h]
+    \centering
+    \caption{Resumo atualizado de desempenho dos modelos LSTM (Tabela 10).}
+    % \resizebox{0.85\textwidth}{!}{%
+    \begin{tabular}{|l|c|c|}
+        \hline
+        \textbf{Modelo} & \textbf{RMSE (W/m²)} & \textbf{$R^2$} \\
+        \hline
+        LSTM base (sem variáveis adicionais) & 159{,}24 & 0{,}7538 \\
+        LSTM + $Res_{ARIMA}(t)$ & 157{,}40 & 0{,}7595 \\
+        LSTM + previsores meteorológicos & 103{,}10 & 0{,}8968 \\
+        LSTM + previsores meteorológicos (com ruído) & 104{,}21 & 0{,}8945 \\
+        \hline
+    \end{tabular}
+    % }
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:resultados_lstm_atualizada}
+\end{table}
+
+\FloatBarrier
+
+
+\subsection{Otimização de hiperparâmetros da LSTM}
+
+Com o objetivo de identificar a configuração de rede mais adequada para cada conjunto de atributos de entrada, foi conduzido um processo de otimização de hiperparâmetros utilizando o framework \textit{Optuna}, com o algoritmo \textit{Tree-structured Parzen Estimator} (TPE). Foram analisadas três variantes de entrada de dados: \textit{Feature Set 1} (LSTM + residúo ARIMA), \textit{Feature Set 2} (variáveis com previsões meteorológicos) e \textit{Feature Set 3} (variáveis com previsões ruidosos). Em todos os casos, manteve-se o mesmo critério de parada antecipada (\textit{early stopping} com paciência de 10 épocas) e a mesma métrica de avaliação (RMSE no conjunto de validação).  
+
+Cada estudo foi composto por \textbf{200 trials independentes}, com armazenamento dos resultados em banco de dados SQLite, permitindo análise posterior via \textit{DataFrame} e ferramentas gráficas do \textit{Optuna}. O espaço de busca, comum às três variantes, encontra-se descrito na Tabela~\ref{tab:space_lstm}.
+
+\begin{table}[!h]
+    \centering
+    \caption{Espaço de busca dos hiperparâmetros da LSTM (comum às três variantes).}
+    \resizebox{0.9\textwidth}{!}{%
+    \begin{tabular}{|l|l|}
+        \hline
+        \textbf{Hiperparâmetro} & \textbf{Intervalo / Opções} \\
+        \hline
+        Número de camadas ($num\_layers$) & [2, 4] (inteiro) \\
+        Tamanho da camada oculta ($hidden\_size$) & [1, 80] (inteiro) \\
+        Taxa de aprendizado ($learning\_rate$) & [0{,}001, 0{,}5] (escala logarítmica) \\
+        Taxa de dropout ($dropout$) & [0{,}1, 0{,}5] (contínuo) \\
+        Tamanho do \textit{batch} ($batch\_size$) & \{512, 1024, 2048\} \\
+        Otimizador ($optimizer$) & \{Adam, RMSProp\} \\
+        Função de ativação ($activation\_function$) & \{Sigmoid, Linear, ReLU, Tanh\} \\
+        Mecanismo de atenção ($attention$) & \{None, Simple\} \\
+        \hline
+    \end{tabular}
+    }
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:space_lstm}
+\end{table}
+
+Para evitar redundâncias e facilitar a interpretação, apenas o \textit{Feature Set 2} será apresentado em detalhe, por ter obtido o melhor desempenho geral. As demais variantes (\textit{Feature Sets 1} e \textit{3}) seguiram o mesmo procedimento e apresentaram comportamentos semelhantes, sendo suas métricas resumidas ao final desta subseção.
+
+A Figura~\ref{fig:opt_hist_feature2} apresenta o histórico de otimização, que mostra a evolução do RMSE ao longo dos 200 \textit{trials}. Observa-se rápida convergência nas primeiras 30 iterações, com redução significativa do erro e estabilização da curva do melhor valor após aproximadamente o 40º \textit{trial}. Essa tendência indica que o número de tentativas foi adequado para cobrir o espaço de busca, com baixa probabilidade de ganhos adicionais relevantes.
+
+\begin{figure}[H]
+    \centering
+    \caption{Histórico de otimização dos \textit{trials} (Feature Set 2).}
+    \includegraphics[width=1\textwidth]{Figuras/Evolução - Feature 2.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:opt_hist_feature2}
+\end{figure}
+\FloatBarrier
+
+O melhor resultado foi obtido no \textit{trial} número 156, com RMSE de \textbf{98,73~W/m²}, conforme mostrado na Tabela~\ref{tab:best_trial_feature2}. Esse valor representa uma melhora expressiva em relação ao modelo base, cujo RMSE era de 103,10~W/m², correspondendo a um ganho relativo de aproximadamente \textbf{4,2\%} apenas com ajuste fino de hiperparâmetros.
+
+\begin{table}[!h]
+    \centering
+    \caption{Melhor conjunto de hiperparâmetros obtido (Feature Set 2).}
+    \begin{tabular}{|l|l|}
+        \hline
+        \textbf{Hiperparâmetro} & \textbf{Valor ótimo} \\
+        \hline
+        Número de camadas & 3 \\
+        Tamanho da camada oculta & 26 \\
+        Taxa de aprendizado & 0{,}00268 \\
+        Dropout & 0{,}25 \\
+        \textit{Batch size} & 512 \\
+        Otimizador & Adam \\
+        Função de ativação & Tanh \\
+        Mecanismo de atenção & None \\
+        \hline
+    \end{tabular}
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:best_trial_feature2}
+\end{table}
+\FloatBarrier
+
+A Figura~\ref{fig:importance_feature2} mostra a importância relativa dos hiperparâmetros estimada pelo \textit{Optuna}. Verifica-se que a \textbf{taxa de aprendizado} foi o fator de maior influência no desempenho (55,1\%), seguida pela \textbf{função de ativação} (40,0\%). Demais variáveis apresentaram impacto marginal, com contribuições inferiores a 3\%. Esse padrão reforça que o comportamento dinâmico da otimização e a estabilidade de convergência da LSTM dependem fortemente da calibração da taxa de aprendizado, enquanto parâmetros estruturais (como tamanho da camada oculta e número de camadas) exercem efeito secundário.
+
+\begin{figure}[H]
+    \centering
+    \caption{Importância dos hiperparâmetros (\textit{Feature Set 2}).}
+    \includegraphics[width=0.95\textwidth]{Figuras/Hiperparametros - Feature 2.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:importance_feature2}
+\end{figure}
+\FloatBarrier
+
+A análise de correlação entre os parâmetros numéricos e o RMSE confirmou essa predominância: a taxa de aprendizado apresentou correlação positiva de \textbf{+0,86}, indicando que valores muito altos tendem a aumentar o erro. O parâmetro \textit{dropout} mostrou correlação leve e positiva (+0,12), sugerindo que níveis excessivos de regularização prejudicam o ajuste. Por outro lado, o tamanho da camada oculta e o número de camadas exibiram correlações próximas de zero, demonstrando que a complexidade estrutural da rede teve efeito limitado.
+
+A Figura~\ref{fig:slice_feature2} apresenta o \textit{slice plot}, que ilustra a relação direta entre cada hiperparâmetro e o RMSE. Observa-se que os menores erros concentram-se em \textbf{taxas de aprendizado entre 0,002 e 0,01}, \textbf{valores de \textit{dropout} entre 0,2 e 0,3} e \textbf{arquiteturas de até 3 camadas ocultas}. Esse comportamento indica que taxas muito pequenas dificultam a convergência, enquanto valores muito altos levam à instabilidade durante o treinamento.
+
+\begin{figure}[!h]
+    \centering
+    \caption{Relação entre hiperparâmetros e RMSE (\textit{Slice Plot}, Feature Set 2).}
+    \includegraphics[width=0.95\textwidth]{Figuras/Slice - Feature 2.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:slice_feature2}
+\end{figure}
+\FloatBarrier
+
+A Figura~\ref{fig:parallel_feature2} apresenta o \textit{Parallel Coordinates Plot}, que tem o objetivo de mostrar as interações entre múltiplos hiperparâmetros e o valor da função objetivo — neste caso, o erro de validação (RMSE) obtido pelo modelo. Cada linha do gráfico representa um \textit{trial} individual (ou seja, uma combinação testada de hiperparâmetros), enquanto cada eixo vertical corresponde a um dos parâmetros ajustados durante a otimização.  
+
+A cor de cada linha indica o valor do RMSE, de modo que tons mais escuros de azul representam combinações que resultaram em menores erros. Essa codificação visual permite identificar, de forma intuitiva, quais regiões do espaço de busca estão associadas a melhor desempenho do modelo.
+
+Em síntese, o gráfico possibilita visualizar:
+\begin{itemize}
+    \item Quais faixas de valores de hiperparâmetros estão associadas aos menores erros de previsão;
+    \item Como diferentes parâmetros interagem entre si, evidenciando combinações mais promissoras — por exemplo, \textit{learning rates} moderadas (em torno de 0,003) associadas a três camadas ocultas e função de ativação \textit{tanh}, que tenderam a produzir os menores valores de RMSE;
+    \item Quais parâmetros apresentaram menor impacto no desempenho, como o otimizador (Adam ou RMSProp) e o mecanismo de atenção, cujas variações não alteraram significativamente a qualidade dos resultados.
+\end{itemize}
+\FloatBarrier
+
+De maneira geral, as linhas mais escuras concentram-se em regiões intermediárias dos eixos de taxa de aprendizado, número de camadas e tamanho da camada oculta, indicando que configurações excessivamente complexas ou com \textit{learning rates} elevadas tendem a aumentar o erro. O padrão observado reforça a conclusão de que a LSTM alcança melhor desempenho com uma estrutura de complexidade moderada e parâmetros de aprendizado ajustados de forma precisa.
+
+
+\begin{figure}[H]
+    \centering
+    \caption{Interações entre hiperparâmetros (\textit{Parallel Coordinates Plot}, Feature Set 2).}
+    \includegraphics[width=0.95\textwidth]{Figuras/Paralelo - Feature 2.png}
+    \par\small{Fonte: Autor (2025)}
+    \label{fig:parallel_feature2}
+\end{figure}
+
+\FloatBarrier
+
+A Tabela~\ref{tab:comparativo_variantes} resume os melhores resultados obtidos para cada conjunto de atributos. Em todos os casos, o processo de otimização contribuiu para redução do erro em relação aos modelos de referência, demonstrando a relevância do ajuste automatizado de hiperparâmetros.
+
+\usepackage{makecell} % Adicione no preâmbulo se ainda não estiver
+
+
+
+% Requires: \usepackage{array}
+\begin{table}[h]
+    \centering
+    \caption{Resumo dos resultados de otimização das três variantes de entrada.}
+    \begin{tabular}{|l|c|c|c|l|}
+        \hline
+        \textbf{Set} & 
+        \shortstack{\textbf{Base}\\\textbf{(W/m²)}} & 
+        \shortstack{\textbf{Otimizado}\\\textbf{(W/m²)}} & 
+        \textbf{(\%)} & 
+        \textbf{Configuração Ótima} \\
+        \hline
+        1 & 157,40 & \textbf{148,62} & 5,6 & 2 camadas, 16 neurônios, LR=0,0047, Sigmoid \\
+        2 & 103,10 & \textbf{98,73} & 4,2 & 3 camadas, 26 neurônios, LR=0,0027, Tanh \\
+        3 & 104,21 & \textbf{101,29} & 2,8 & 3 camadas, 25 neurônios, LR=0,0032, Tanh \\
+        \hline
+    \end{tabular}
+    \par\small{Fonte: Autor (2025)}
+    \label{tab:comparativo_variantes}
+\end{table}
+
+\FloatBarrier
+
+Observa-se que, embora os ganhos absolutos sejam modestos, a consistência entre os três estudos reforça a estabilidade da metodologia. Em todos os casos, a combinação de \textbf{otimizador Adam}, função de ativação \textbf{Tanh ou Sigmoid} e taxas de aprendizado em torno de $3\times10^{-3}$ apresentou melhor desempenho. Além disso, redes mais rasas e compactas mantiveram desempenho superior, sugerindo que o problema em questão não demanda arquiteturas profundas para capturar sua dinâmica temporal.
+
+
+Em síntese, os resultados da otimização indicam que:
+\begin{itemize}
+    \item A \textbf{taxa de aprendizado} é o hiperparâmetro mais sensível, exercendo impacto dominante sobre o RMSE em todas as variantes (importância média de 0,59).
+    \item A \textbf{função de ativação} tem efeito secundário, mas relevante, com destaque para \textit{tanh} e \textit{sigmoid}, que favoreceram estabilidade de gradientes.
+    \item O uso de \textbf{mecanismos de atenção} não trouxe melhoria significativa, sugerindo que a LSTM padrão já captura as dependências temporais relevantes.
+    \item O número de camadas e o tamanho da camada oculta tiveram influência marginal, apontando que arquiteturas mais simples são mais eficientes para o problema em questão.
+\end{itemize}
+
+
