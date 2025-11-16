@@ -57,22 +57,21 @@ Esse procedimento será aplicado a todas as variáveis presentes nos conjuntos d
 Para a organização dos dados em lotes durante o treinamento dos modelos sequenciais (como a LSTM), será empregado o \texttt{DataLoader} da biblioteca \texttt{PyTorch}, o qual receberá como entrada tensores normalizados e produzirá lotes no formato $\{ \text{features}, \text{input}, \text{output} \}$, conforme definido no processo de janelação. Isso garantirá eficiência computacional e consistência na passagem dos dados durante o ciclo de treinamento, validação e teste.
 
 \subsection{Janelação supervisionada}
-A série multivariada será transformada em amostras supervisionadas definindo-se \textbf{janela de entrada} (comprimento $L$), \textbf{janela de saída} (horizonte $H$) e \textbf{passo} (\textit{stride} $s$). Cada amostra $n$ será construída conforme a Equação (\ref{eq:janela_superv}):
+
+A série multivariada será transformada em amostras supervisionadas por meio da definição de \textbf{janela de entrada} (comprimento $L$), \textbf{janela de saída} (horizonte $H$) e \textbf{passo} (\textit{stride} $s$). Cada amostra $n$ será construída conforme a Equação (\ref{eq:janela_superv}):
 \begin{equation}
-\mathbf{X}^{(n)} = \big[\, \mathbf{x}_{t-L+1}, \dots, \mathbf{x}_{t} \,\big] \in \mathbb{R}^{L \times p}, 
-\quad 
-\mathbf{y}^{(n)} = \big[\, y_{t+1}, \dots, y_{t+H} \,\big] \in \mathbb{R}^{H}
+\mathbf{X}^{(n)} = \big[\, \mathbf{x}_{t-L+1}, \dots, \mathbf{x}_{t} \,\big] \in \mathbb{R}^{L \times p},
+\qquad
+\mathbf{y}^{(n)} = \big[\, y_{t+1}, \dots, y_{t+H} \,\big] \in \mathbb{R}^{H}.
 \label{eq:janela_superv}
 \end{equation}
 
 \noindent
-Em que $\mathbf{x}_t \in \mathbb{R}^{p}$ conterá variáveis meteorológicas, sazonais (seno/cosseno) e resíduos/decomposições quando aplicável; $\mathbf{X}^{(n)} \in \mathbb{R}^{L \times p}$ agregará $L$ instantes passados; e $\mathbf{y}^{(n)} \in \mathbb{R}^{H}$ conterá $H$ passos futuros da irradiância.
-
-O índice $t$ avançará pelo tempo com passo $s$ (típico $s=1$), gerando amostras sobrepostas (maior cobertura) ou não (menor correlação entre amostras), de acordo com o desenho experimental. Espera-se que $L$ capture memória suficiente e que $H$ reflita os horizontes de interesse operacional.
+Em que $\mathbf{x}_t \in \mathbb{R}^{p}$ conterá variáveis meteorológicas, componentes sazonais (seno/cosseno) e variáveis derivadas quando aplicável; $\mathbf{X}^{(n)} \in \mathbb{R}^{L \times p}$ agregará $L$ instantes passados; e $\mathbf{y}^{(n)} \in \mathbb{R}^{H}$ representará os $H$ passos futuros da irradiância. O índice $t$ avançará com passo $s$ (tipicamente $s=1$), permitindo gerar amostras sobrepostas (maior densidade de treinamento) ou não sobrepostas (menor autocorrelação entre amostras), conforme o objetivo experimental. O valor de $L$ deverá capturar memória temporal suficiente, enquanto $H$ refletirá o horizonte operacional de interesse.
 
 \begin{itemize}
-    \item \textbf{Redes recorrentes/convolucionais}: lotes com dimensão $B$ resultarão em tensores $\mathbf{X}\_{\mathrm{batch}} \in \mathbb{R}^{B \times L \times p}$ (LSTM/Attention) ou $\mathbb{R}^{B \times p \times L}$ (CNN-1D). Saídas multi-etapas produzirão $\hat{\mathbf{y}} \in \mathbb{R}^{B \times H}$.
-    \item \textbf{XGBoost/árvores}: a janela será \textit{vetorizada} em $\mathbf{u}^{(n)} \in \mathbb{R}^{L \cdot p}$ ou expandida em estatísticas (médias, mínimos, máximos, últimas $k$ observações). O treinamento poderá ser \textit{multi-output} direto (um modelo para $H$ saídas) ou \textit{direct per horizon} (um modelo por $h\in\{1,\dots,H\}$).
+    \item \textbf{LSTM}: lotes de tamanho $B$ produzirão tensores $\mathbf{X}_{\mathrm{batch}} \in \mathbb{R}^{B \times L \times p}$, e a previsão multi-etapas será representada por $\hat{\mathbf{y}} \in \mathbb{R}^{B \times H}$.
+    \item \textbf{XGBoost}: a janela será \textit{vetorizada} em $\mathbf{u}^{(n)} \in \mathbb{R}^{L \cdot p}$ ou expandida em estatísticas agregadas (médias, mínimos, máximos, últimas $k$ observações). O treinamento poderá ocorrer em formato \textit{multi-output} (um único modelo para $H$ saídas) ou \textit{direct per horizon} (um modelo independente para cada $h\in\{1,\dots,H\}$).
 \end{itemize}
 
 \subsection{Estratégia multi-etapas}
@@ -92,7 +91,7 @@ As saídas $\hat{\mathbf{y}}^{(n)}$ serão reindexadas nas datas futuras corresp
 
 \subsection{Infraestrutura de Rastreamento Experimental (MLflow)}
 
-Será adotado o \texttt{MLflow} para rastrear parâmetros, métricas, artefatos e versões de modelos (e.g., LSTM, ARIMA--LSTM, Attention, RSTL, XGBoost). A motivação será garantir reprodutibilidade, auditoria e comparabilidade sistemática.
+Será adotado o \texttt{MLflow} para rastrear parâmetros, métricas, artefatos e versões de modelos. A motivação será garantir reprodutibilidade, auditoria e comparabilidade sistemática.
 
 A instrumentação incluirá:
 \begin{itemize}

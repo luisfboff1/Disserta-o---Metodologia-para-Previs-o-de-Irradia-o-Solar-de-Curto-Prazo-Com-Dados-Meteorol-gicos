@@ -111,7 +111,7 @@ Com vistas à operacionalização, os $H$ modelos resultantes serão incorporado
 
 Será implementada uma função principal de treino/validação por saída, responsável por treinar o modelo do horizonte $i$, avaliar RMSE e $R^2$ em treino, validação e teste, e registrar parâmetros, métricas e artefatos no MLflow. A função receberá, entre outros, as janelas \texttt{X\_train}, \texttt{X\_val}, \texttt{X\_test}, os respectivos alvos colunares (\texttt{y\_train[:, i]}, \texttt{y\_val[:, i]}, \texttt{y\_test[:, i]}), e o dicionário de hiperparâmetros do XGBoost, conforme a Tabela \ref{tab:param_xgb_train}. Em termos conceituais, sua ação corresponderá à minimização da Equação \ref{eq:xgb_obj} e à composição final da Equação (\ref{eq:aggregate_preds}), com salvaguarda de não negatividade conforme a Equação (\ref{eq:nonneg_clip}).
 
-\begin{table}[H]
+\begin{table}[!h]
     \centering
     \caption{Principais parâmetros da função \texttt{treinar\_modelo\_saida\_booster}.}
     \resizebox{0.95\textwidth}{!}{%
@@ -149,6 +149,6 @@ Será implementada uma função principal de treino/validação por saída, resp
     \label{tab:param_xgb_train}
 \end{table}
 
-Optar-se-á por não normalizar as variáveis por três razões práticas: (i) modelos de árvores serão pouco sensíveis à escala, (ii) preservar-se-á a interpretabilidade física em unidades originais ao longo do pipeline e (iii) evitar-se-á potencial viés de \textit{leakage} na aplicação de transformações dependentes do conjunto. A estratégia direta com $H$ modelos oferecerá ganhos de especialização por horizonte (curto vs.\ longo prazo) e evitará o acúmulo de erro típico de abordagens recursivas.
+Optar-se-á por não normalizar as variáveis por três razões práticas: (i) modelos de árvores serão pouco sensíveis à escala, (ii) preservar-se-á a interpretabilidade física em unidades originais ao longo do pipeline e (iii) evitar-se-á potencial viés de \textit{leakage} na aplicação de transformações dependentes do conjunto.
 
 A generalidade da função de treinamento por horizonte, parametrizada por $L$, $H$, \texttt{features}, \texttt{stride} e \texttt{params}, permitirá replicar facilmente: (a) otimizações de hiperparâmetros (substituindo-se \texttt{params} por amostras geradas por um otimizador externo); (b) estudos de sensibilidade (p.\,ex., variar \texttt{max\_depth}/\texttt{min\_child\_weight}); (c) testes de ablação de variáveis (incluir/excluir subconjuntos de \texttt{features}); e (d) mudanças de $L$ e $H$ sem alterações estruturais no código. O empacotamento em uma classe \texttt{pyfunc} no MLflow garantirá que, mesmo com $H$ modelos internos, a interface de predição permaneça unificada, facilitando reuso e implantação.

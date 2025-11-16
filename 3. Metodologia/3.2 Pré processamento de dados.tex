@@ -85,33 +85,6 @@ A escolha de $\cos^{2}(\cdot)$ apresenta três vantagens práticas: (i) domínio
 
 Do ponto de vista metodológico, a construção acima evitará descontinuidades entre valores adjacentes (por exemplo, entre mês=12 e mês=1), padronizará a amplitude em $[0,1]$ e permitirá alinhar os picos aos comportamentos físicos de interesse por meio de $\varphi$. Essa padronização também facilitará a interpretação e a comparação entre estudos, uma vez que a mesma forma funcional será aplicada às diferentes escalas temporais consideradas.
 
-\subsection{Engenharia de variáveis adicionais}
-
-Serão introduzidos atributos derivados da própria série de irradiância com o objetivo de fornecer ao modelo informações explícitas sobre a dinâmica temporal, conforme as Equações (\ref{eq:deltas})--(\ref{eq:direcao}).
-
-\begin{align}
-\Delta SWD_{1}(t) &= SWD(t) - SWD(t-1), \nonumber \\
-\Delta SWD_{5}(t) &= SWD(t) - SWD(t-5), \nonumber \\
-\Delta SWD_{10}(t) &= SWD(t) - SWD(t-10)
-\label{eq:deltas}
-\end{align}
-
-\begin{align}
-SWD_{m3}(t) &= \frac{1}{3}\sum_{i=0}^{2} SWD(t-i), \nonumber \\
-SWD_{m9}(t) &= \frac{1}{9}\sum_{i=0}^{8} SWD(t-i), \nonumber \\
-\Delta SWD_{mmed}(t) &= SWD_{m3}(t) - SWD_{m9}(t)
-\label{eq:medias}
-\end{align}
-
-\begin{equation}
-dir_{SWD}(t) = \text{sign}\left(\Delta SWD_{1}(t)\right)
-\label{eq:direcao}
-\end{equation}
-
-\noindent
-Em que $\Delta SWD_{1}(t)$, $\Delta SWD_{5}(t)$ e $\Delta SWD_{10}(t)$ representarão variações de curto prazo em diferentes escalas temporais; $SWD_{m3}(t)$ e $SWD_{m9}(t)$ corresponderão às médias móveis de 3 e 9 passos, respectivamente; $\Delta SWD_{mmed}(t)$ será definido como a diferença entre as duas médias móveis, funcionando como um indicador explícito de tendência; e $dir_{SWD}(t)$ será a variável categórica derivada do sinal de $\Delta SWD_{1}(t)$, assumindo valores $+1$ para tendência de subida, $-1$ para tendência de descida e $0$ para estabilidade.
-
-Em síntese, essas variáveis adicionais serão construídas com o intuito de ampliar a capacidade dos modelos de aprendizado de máquina em capturar comportamentos de curtíssimo prazo (rampas), padrões de oscilação (diferenças em múltiplos horizontes), tendências locais (diferença entre médias) e direção da variação (sinal).
 
 \subsection{Incorporação de resíduo ARIMA}
 
@@ -131,21 +104,8 @@ A motivação para incorporar tanto a previsão $SWD_{ARIMA}(t)$ quanto o resíd
 
 \subsection{Integração de previsores do dia seguinte}
 
-Por fim, será incorporado ao modelo um conjunto de informações meteorológicas que estariam disponíveis em um cenário real de previsão. Para simular essa situação, serão utilizadas as próprias séries de temperatura, umidade relativa e pressão atmosférica, deslocadas em um dia para trás, gerando as variáveis descritas pela Equação (\ref{eq:prev_meteo}).
+Para simular um cenário operacional realista, serão incorporadas ao modelo variáveis meteorológicas previstas para o dia seguinte. Como as bases radiométricas históricas não fornecem previsões NWP associadas, adotar-se-á a aproximação padrão de deslocar em um dia as séries observadas de temperatura, umidade relativa e pressão, conforme Equação (\ref{eq:prev_meteo}). Essas variáveis $X_{prev}(t)$ funcionarão como preditores exógenos que antecipam mudanças meteorológicas relevantes — como queda de temperatura ou aumento de umidade — que influenciam diretamente a irradiância. Essa estratégia busca refletir a prática comum em sistemas operacionais de previsão solar, nos quais modelos estatísticos e de deep learning utilizam previsões meteorológicas como insumo adicional.
 
-\begin{equation}
-X_{prev}(t) = X(t+1\,dia), \quad X \in \{\text{Temp}, RH, Pressure\}
-\label{eq:prev_meteo}
-\end{equation}
+Para representar a incerteza inerente a previsões reais, também serão geradas versões perturbadas por ruído gaussiano das mesmas variáveis ($X_{prev\_ruido}$). Essa construção permitirá avaliar a robustez do modelo diante de previsões imperfeitas, aproximando-se de cenários em que há erros de prognóstico típicos de NWP. O conjunto final incluirá, portanto, variáveis originais e derivadas que capturam tanto o estado atual quanto tendências antecipadas, ampliando o potencial explicativo do modelo. A utilidade prática dessas variáveis será determinada empiricamente na etapa de experimentação, por meio de métricas de desempenho e análises de importância.
 
-\noindent
-Em que $X_{prev}(t)$ representará a série deslocada de um dia, utilizada como proxy da previsão meteorológica operacional para o instante $t$; e $X(t)$ corresponderá à variável meteorológica original (temperatura, umidade relativa ou pressão).
-
-A motivação para a inclusão dessas variáveis será fornecer ao modelo uma visão antecipada de possíveis mudanças meteorológicas no dia seguinte. Por exemplo, no meio da tarde poderá ocorrer queda de temperatura, aumento de umidade ou precipitação, fatores que impactarão diretamente a irradiância solar. Atualmente, tais previsões são amplamente disponíveis por modelos numéricos de previsão do tempo (NWP), sendo natural sua utilização em sistemas de previsão solar.
-
-Entretanto, muitas bases históricas de dados radiométricos não fornecem diretamente a previsão meteorológica associada. Nesses casos, poderá ser assumido que a melhor aproximação para a previsão de uma variável no dia seguinte é o próprio valor observado nesse dia, deslocado no tempo. Essa construção garantirá que o modelo seja capaz de acompanhar tendências gerais do dia seguinte, ainda que na prática, em um cenário operacional, exista um erro adicional proveniente da incerteza da previsão.
-
-Com o intuito de simular essa incerteza, também serão construídas versões perturbadas por ruído gaussiano $N(0,\sigma^2)$, resultando nas variáveis $X_{prev\_ruido}$. Essa abordagem representará situações em que a previsão meteorológica não é exata, mas possui margens de erro, como no caso de previsões probabilísticas de chuva (por exemplo, 80\% de chance de precipitação). Assim, será avaliado não apenas o impacto da previsão meteorológica perfeita, mas também a resiliência do modelo diante de previsões imperfeitas.
-
-O resultado desse processo de pré-processamento e engenharia de dados será um conjunto de variáveis originais e derivadas que sintetizarão tanto informações físicas quanto estatísticas da série temporal, ampliando a capacidade potencial dos modelos preditivos em capturar padrões complexos de variação da irradiância solar. Ressalta-se, contudo, que a utilidade efetiva de cada variável auxiliar não será assumida previamente. Todas as variáveis criadas serão analisadas e testadas na etapa de experimentos, de forma a verificar sua relevância prática para a tarefa de previsão. Assim, a seleção final das variáveis a serem utilizadas será fundamentada nos resultados obtidos, considerando tanto o impacto sobre as métricas de desempenho quanto a análise de importância de atributos.
 

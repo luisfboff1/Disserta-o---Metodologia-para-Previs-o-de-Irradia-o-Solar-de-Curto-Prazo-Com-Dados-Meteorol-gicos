@@ -147,19 +147,16 @@ De forma geral, a análise mostra que as distribuições temporais (ano, mês, h
 
 \subsection{Correlação entre variáveis}
 
-As matrizes de Pearson e Spearman, Figura~\ref{fig:corr} e Figura~\ref{fig:corr1}, respectivamente,  mostram que a variável temporal transformada hora sazonal é o preditor individual mais associado à irradiância: a correlação é forte e positiva tanto em Spearman ($\rho\approx0{,}81$) quanto em Pearson ($r\approx0{,}75$). Esse ganho, frente à correlação praticamente nula com a hora bruta ($\rho\approx-0{,}13$; $r\approx-0{,}09$), confirma que a transformação cossenoidal lineariza o ciclo intradiário e preserva a monotonicidade esperada com o ângulo zenital solar. Em seguida, destacam-se a temperatura do ar, com correlação positiva moderada e estável entre os métodos ($\rho\approx0{,}47$; $r\approx0{,}48$), e a umidade relativa, com correlação negativa moderada a forte e igualmente estável ($\rho\approx-0{,}57$; $r\approx-0{,}60$). A sazonalidade anual transformada \textit{mes\_sazonal} apresenta correlação positiva de baixa a moderada ($\rho\approx0{,}25$; $r\approx0{,}27$), superior à do \textit{mes} categorizado ($\rho\approx0{,}03$; $r\approx0{,}03$), reforçando que a codificação cíclica também favorece o aprendizado do padrão sazonal. As demais variáveis temporais (\textit{dia}, \textit{minuto} e \textit{ano}) exibem correlações próximas de zero, e a pressão atmosférica mantém associação muito fraca com $\mathrm{SWD}$ em ambas as métricas ($\rho\approx0{,}02$; $r\approx0{,}03$).
+As matrizes de Pearson e Spearman (Figuras~\ref{fig:corr} e \ref{fig:corr1}) indicaram que a transformação cíclica da hora (\textit{hora\_sazonal}) é o preditor mais relevante, apresentando a maior correlação direta com a irradiância, seguida da temperatura do ar (correlação positiva moderada) e da umidade relativa (correlação negativa moderada a forte). Também a sazonalidade anual transformada (\textit{mes\_sazonal}) mostrou associação superior à do mês bruto, evidenciando que representações cíclicas favorecem a captura dos padrões intradiários e sazonais. Por outro lado, variáveis como \textit{dia}, \textit{minuto}, \textit{ano} e pressão atmosférica exibiram correlações muito baixas, sugerindo menor potencial preditivo isolado.
 
-Comparando-se os dois coeficientes, observou-se que Spearman tende a realçar levemente relações monotônicas não estritamente lineares: isso aparece sobretudo em \textit{hora\_sazonal}, cuja força aumenta de $r\approx0{,}75$ para $\rho\approx0{,}81$, sugerindo pequeno desvio de linearidade no ciclo diurno que ainda assim é capturado como monotônico. Para temperatura e umidade relativa, os valores são praticamente coincidentes entre Pearson e Spearman, indicando que, no escopo amostral, as relações com $\mathrm{SWD}$ são aproximadamente lineares. Já a \textit{hora} bruta ganha (em módulo) na correlação de Spearman em relação a Pearson, efeito compatível com a forma não linear (em “arco”) do ciclo intradiário quando não transformado.
+As relações entre preditores revelaram redundâncias esperadas, especialmente entre temperatura, umidade relativa e a própria sazonalidade anual, reforçando a necessidade de parcimônia e regularização em modelos sensíveis à multicolinearidade. Em modelos não lineares como XGBoost e LSTM, essas redundâncias são menos problemáticas, mas a adoção das codificações cíclicas permanece recomendada por simplificar padrões temporais. Em síntese, os resultados orientam a priorização de \textit{hora\_sazonal}, temperatura, umidade relativa e \textit{mes\_sazonal} como preditores centrais, enquanto as demais variáveis devem ser incluídas apenas quando agregarem informação complementar relevante.
 
-As correlações entre preditores ajudam a antecipar redundâncias: \textit{mes\_sazonal} apresenta correlação moderada com temperatura ($\rho\approx0{,}61$; $r\approx0{,}60$) e moderada negativa com pressão ($\rho\approx-0{,}49$; $r\approx-0{,}50$); temperatura é moderadamente anticorrelacionada a umidade relativa ($\rho\approx-0{,}50$; $r\approx-0{,}50$) e a pressão ($\rho\approx-0{,}52$; $r\approx-0{,}53$); \textit{hora\_sazonal} correlaciona-se de forma leve a moderada com temperatura ($\rho\approx0{,}33$; $r\approx0{,}33$) e negativamente com umidade relativa ($\rho\approx-0{,}42$; $r\approx-0{,}42$). Tais associações sugerem atenção à multicolinearidade em modelos lineares; para esses casos, recomenda-se priorizar as codificações sazonais (\textit{hora\_sazonal} e \textit{mes\_sazonal}) em lugar das versões brutas (\textit{hora} e \textit{mes}), e empregar regularização. Em modelos baseados em árvores, a redundância tende a ser menos crítica, mas a preferência por codificações cíclicas mantém-se vantajosa por favorecer separações mais simples.
-
-Em síntese, as variáveis mais promissoras para previsão de $\mathrm{SWD}$, à luz da Figura~\ref{fig:corr}, são: \textit{hora\_sazonal} (maior correlação direta), \textit{RH} (maior correlação inversa), \textit{Temp} (correlação direta moderada) e \textit{mes\_sazonal} (efeito sazonal anual capturado de forma mais linear). As variáveis \textit{hora} e \textit{mes} podem ser descartadas em favor de suas versões sazonais; \textit{dia}, \textit{minuto}, \textit{ano} e \textit{Pressure} mostram baixo potencial explicativo isolado e devem ser incluídas, se for o caso, apenas como controles ou para capturar efeitos de interação. Considerando que Spearman foi ligeiramente mais sensível às relações monotônicas induzidas pelas transformações cíclicas, adotou-se sua leitura como referência para interpretar força ordinal das associações, mantendo-se Pearson como verificação de linearidade. Essa dupla leitura sustenta a decisão de engenharia de variáveis e orienta a parcimônia na seleção de preditores.
 
 
 \begin{figure}[!h]
     \centering
     \caption{Matriz de correlação de Pearson.}
-    \includegraphics[width=0.95\textwidth]{Figuras/Pearson.png}
+    \includegraphics[width=0.85\textwidth]{Figuras/Pearson.png}
     \par\small{Fonte: Autor (2025)}
     \label{fig:corr}
 \end{figure}
@@ -167,11 +164,11 @@ Em síntese, as variáveis mais promissoras para previsão de $\mathrm{SWD}$, à
 \begin{figure}[!h]
     \centering
     \caption{Matriz de correlação de Spearman.}
-    \includegraphics[width=0.95\textwidth]{Figuras/Spearman.png}
+    \includegraphics[width=0.85\textwidth]{Figuras/Spearman.png}
     \par\small{Fonte: Autor (2025)}
     \label{fig:corr1}
 \end{figure}
-
+\FloatBarrier
 \subsection{Síntese da Análise Exploratória (DEA)}
 
 A DEA, ancorada nas distribuições univariadas (com $n_b$ reportado no topo de cada barra) e nas matrizes de correlação (Figura~\ref{fig:corr}), permitiu consolidar evidências sobre sazonalidade, condicionamento atmosférico e seleção de preditores. O pré-processamento adotado assegurou suporte homogêneo por hora e minuto — dias com lacunas superiores a 30 minutos foram removidos integralmente — e as codificações sazonais (\textit{hora\_sazonal} e \textit{mes\_sazonal}) foram construídas com bins de largura igual, evitando quebras artificiais.

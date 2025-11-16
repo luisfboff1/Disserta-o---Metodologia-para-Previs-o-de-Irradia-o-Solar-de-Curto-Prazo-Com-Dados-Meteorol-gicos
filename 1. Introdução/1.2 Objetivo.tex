@@ -6,9 +6,9 @@ O objetivo principal deste trabalho é \textbf{prever a irradiância solar para 
 A fim de viabilizar o objetivo principal, foram estabelecidos os seguintes objetivos específicos:
 
 \begin{itemize}
-    \item Avaliar diferentes arquiteturas de modelagem, incluindo redes neurais recorrentes (LSTM e variações), modelos híbridos (ARIMA--LSTM, RSTL--LSTM, Attention) e modelos baseados em árvores (XGBoost).
+    \item Avaliar diferentes arquiteturas de modelagem, incluindo redes neurais recorrentes (LSTM e variações), modelos híbridos (ARIMA--LSTM) e modelos baseados em árvores (XGBoost).
     \item Analisar o impacto das variáveis de entrada, comparando desempenhos obtidos com variáveis exclusivamente meteorológicas, exclusivamente históricas da irradiância e combinações entre ambas.
-    \item Investigar a influência de diferentes tamanhos de janelas de entrada (\textit{input window}) e horizontes de saída (\textit{output window}), verificando sua contribuição para a qualidade preditiva.
+    \item Investigar a influência de diferentes tamanhos de janelas de entrada (\textit{input window}), verificando sua contribuição para a qualidade preditiva.
     \item Realizar a otimização de hiperparâmetros relevantes de cada arquitetura, tais como número de camadas, número de neurônios, taxa de aprendizado, \textit{dropout} e, no caso de modelos baseados em árvores, profundidade e número de estimadores.
     \item Comparar os modelos em termos de desempenho e generalização, empregando métricas globais e por horizonte, com destaque para RMSE e $R^2$, a fim de identificar quais arquiteturas apresentam melhor compromisso entre acurácia, robustez e interpretabilidade.
     \item Explorar a aplicabilidade prática dos modelos propostos, discutindo suas vantagens e limitações em cenários reais de previsão solar, bem como suas perspectivas de integração em sistemas de gestão e operação de energia.
